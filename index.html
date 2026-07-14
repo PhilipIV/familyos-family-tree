@@ -19,6 +19,7 @@
       --danger: #b33a3a;
       --focus: #1e6091;
       --shadow: 0 10px 30px rgba(78, 52, 36, .12);
+      --workspace-edge: #c8b09d;
       --font-scale: 1;
       --card-w: 190px;
       --card-h: 108px;
@@ -35,6 +36,7 @@
       --accent-2: #68b7a7;
       --danger: #ef7777;
       --shadow: 0 10px 30px rgba(0, 0, 0, .35);
+      --workspace-edge: #806b5e;
     }
 
     [data-theme="light"] {
@@ -43,6 +45,7 @@
       --panel: #fff;
       --accent: #6e6a45;
       --accent-2: #28666e;
+      --workspace-edge: #b8c4c8;
     }
 
     * { box-sizing: border-box; }
@@ -178,18 +181,40 @@
     .view.active { display: block; }
     .content { padding: 1rem; max-width: 1280px; margin: 0 auto; }
 
-    .tree-view { height: calc(100vh - 65px); display: grid; grid-template-rows: auto 1fr; }
-    .tree-toolbar {
-      display: flex;
-      gap: .5rem;
-      align-items: center;
-      justify-content: space-between;
-      padding: .65rem;
-      border-bottom: 1px solid var(--line);
+    .tree-view {
+      height: calc(100vh - 65px);
+      grid-template-rows: auto minmax(360px, 1fr);
+      gap: .75rem;
+      padding: .75rem;
+      overflow: auto;
       background: var(--bg);
-      flex-wrap: wrap;
     }
-    .legend { display: flex; gap: .55rem; flex-wrap: wrap; align-items: center; font-size: .86rem; }
+    .tree-view.active { display: grid; }
+    .tree-toolbar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: .7rem 1rem;
+      align-items: center;
+      padding: .8rem .9rem;
+      border: 1px solid var(--workspace-edge);
+      border-left: 4px solid var(--accent);
+      border-radius: 6px;
+      background: var(--panel);
+      box-shadow: 0 3px 12px rgba(78, 52, 36, .08);
+    }
+    .tree-heading { display: flex; gap: .7rem; align-items: baseline; min-width: 0; flex-wrap: wrap; }
+    .tree-heading h1 { margin: 0; font-size: 1.08rem; line-height: 1.2; }
+    .tree-summary { color: var(--muted); font-size: .82rem; font-weight: 700; }
+    .legend {
+      grid-column: 1 / -1;
+      display: flex;
+      gap: .55rem;
+      flex-wrap: wrap;
+      align-items: center;
+      padding-top: .65rem;
+      border-top: 1px solid var(--line);
+      font-size: .82rem;
+    }
     .legend span { display: inline-flex; align-items: center; gap: .25rem; }
     .sample-line { width: 30px; height: 0; border-top: 3px solid var(--accent-2); display: inline-block; }
     .sample-line.dashed { border-top-style: dashed; }
@@ -202,9 +227,13 @@
       background:
         linear-gradient(var(--line) 1px, transparent 1px),
         linear-gradient(90deg, var(--line) 1px, transparent 1px);
+      background-color: var(--surface);
       background-size: 36px 36px;
+      border: 2px solid var(--workspace-edge);
+      border-radius: 6px;
+      box-shadow: inset 0 0 0 1px var(--panel), 0 4px 16px rgba(78, 52, 36, .09);
       touch-action: none;
-      min-height: 500px;
+      min-height: 360px;
     }
     .tree-stage {
       position: absolute;
@@ -400,6 +429,8 @@
       .filters, .grid.four, .grid.three, .grid.two, .form-grid, .profile-layout { grid-template-columns: 1fr; }
       .view { min-height: calc(100vh - 120px); }
       .tree-view { height: calc(100vh - 120px); }
+      .tree-toolbar { grid-template-columns: 1fr; }
+      .tree-toolbar .actions-row { justify-content: start; }
     }
 
     @media (max-width: 560px) {
@@ -409,6 +440,7 @@
       .member-row { grid-template-columns: 48px 1fr; }
       .member-row .actions-row { grid-column: 1 / -1; }
       :root { --card-w: 170px; }
+      .tree-view { gap: .5rem; padding: .5rem; }
     }
 
     @media print {
@@ -452,6 +484,15 @@
       <main>
         <section id="treeView" class="view active tree-view" aria-label="Family tree">
           <div class="tree-toolbar">
+            <div class="tree-heading">
+              <h1>Tree Workspace</h1>
+              <span id="treeSummary" class="tree-summary" role="status" aria-live="polite">0 members · 0 connections</span>
+            </div>
+            <div class="actions-row">
+              <button id="zoomOutBtn" aria-label="Zoom out">−</button>
+              <button id="zoomInBtn" aria-label="Zoom in">＋</button>
+              <button id="printTreeBtn">Print Tree</button>
+            </div>
             <div class="legend" aria-label="Relationship legend">
               <span><i class="sample-line"></i> Biological</span>
               <span><i class="sample-line dashed"></i> Adopted</span>
@@ -459,11 +500,6 @@
               <span><i class="sample-line double"></i> Partner</span>
               <span>◇ Guardian/Foster labeled on line</span>
               <span>Double card border = deceased</span>
-            </div>
-            <div class="actions-row">
-              <button id="zoomOutBtn" aria-label="Zoom out">−</button>
-              <button id="zoomInBtn" aria-label="Zoom in">＋</button>
-              <button id="printTreeBtn">Print Tree</button>
             </div>
           </div>
           <div id="treeCanvas" class="tree-canvas" tabindex="0" aria-label="Pan and zoom family tree">
@@ -763,6 +799,9 @@
       let pendingImport = null;
       let collapsed = new Set();
       let treeState = { scale: 1, x: 80, y: 80, dragging: false, lastX: 0, lastY: 0 };
+      let refreshFrame = 0;
+      let fitAfterRefresh = false;
+      let lastRefreshAt = 0;
 
       function id(prefix) {
         return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
@@ -801,6 +840,20 @@
         } catch (err) {
           alert("This browser storage is full or unavailable. Export a backup, remove large photos, or clear old data.");
         }
+        refreshAfterAction();
+      }
+
+      function refreshAfterAction({ fitTree: shouldFitTree = activeView === "tree" } = {}) {
+        fitAfterRefresh = fitAfterRefresh || shouldFitTree;
+        if (refreshFrame) return;
+        refreshFrame = requestAnimationFrame(() => {
+          refreshFrame = 0;
+          const refitTree = fitAfterRefresh;
+          fitAfterRefresh = false;
+          lastRefreshAt = Date.now();
+          render();
+          if (refitTree && activeView === "tree") requestAnimationFrame(fitTree);
+        });
       }
 
       function showSaved() {
@@ -919,6 +972,10 @@
       function renderTree() {
         const nodesEl = $("#treeNodes");
         const linksEl = $("#treeLinks");
+        const memberCount = data.members.length;
+        const relationshipCount = data.relationships.length;
+        const updatedLabel = lastRefreshAt ? ` · Updated ${new Date(lastRefreshAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : "";
+        $("#treeSummary").textContent = `${memberCount} member${memberCount === 1 ? "" : "s"} · ${relationshipCount} connection${relationshipCount === 1 ? "" : "s"}${updatedLabel}`;
         nodesEl.innerHTML = "";
         linksEl.innerHTML = "";
         if (!data.members.length) {
@@ -1249,7 +1306,6 @@
         }
         save();
         $("#memberDialog").close();
-        render();
       }
 
       function openProfile(memberId) {
@@ -1330,7 +1386,6 @@
         save();
         $("#relationDialog").close();
         $("#profileDialog").close();
-        render();
         openProfile(values.baseId);
       }
 
@@ -1399,7 +1454,6 @@
         data.relationships = data.relationships.filter(r => r.id !== relId);
         save();
         $("#profileDialog").close();
-        render();
         openProfile(activeProfileId);
       }
 
@@ -1415,7 +1469,6 @@
         save();
         $("#memberDialog").close();
         $("#profileDialog").close();
-        render();
       }
 
       function openNote(noteId = "") {
@@ -1445,7 +1498,6 @@
         }
         save();
         $("#noteDialog").close();
-        render();
       }
 
       function openEvent(eventId = "") {
@@ -1470,7 +1522,6 @@
         }
         save();
         $("#eventDialog").close();
-        render();
       }
 
       function exportData() {
@@ -1500,7 +1551,6 @@
         pendingImport = null;
         save();
         $("#importDialog").close();
-        render();
       }
 
       function createBackup() {
@@ -1515,7 +1565,6 @@
         if (!confirm("Restore the last browser backup and replace current data?")) return;
         data = migrate(JSON.parse(raw));
         save();
-        render();
       }
 
       function clearAllData() {
@@ -1525,7 +1574,6 @@
         data = blankData();
         data.settings.firstRunComplete = true;
         save();
-        render();
       }
 
       function globalSearch(term) {
@@ -1617,8 +1665,6 @@
         data.familyNotes.push({ id: "demo_note", title: "Sunday Dinner Tradition", category: "Traditions", tags: ["food", "gatherings"], pinned: true, body: "The family gathers on the first Sunday of each month. Everyone brings one dish and one story.", createdAt: now, updatedAt: now });
         save();
         $("#welcome").classList.remove("open");
-        render();
-        setTimeout(fitTree, 100);
       }
 
       function initOptions() {
@@ -1646,7 +1692,7 @@
         $("#addEventBtn").addEventListener("click", () => openEvent());
         $("#editProfileBtn").addEventListener("click", () => { $("#profileDialog").close(); openMember(activeProfileId); });
         $("#profilePrintBtn").addEventListener("click", () => window.print());
-        $("#startNewBtn").addEventListener("click", () => { data.settings.firstRunComplete = true; save(); $("#welcome").classList.remove("open"); render(); });
+        $("#startNewBtn").addEventListener("click", () => { data.settings.firstRunComplete = true; save(); $("#welcome").classList.remove("open"); });
         $("#loadDemoBtn").addEventListener("click", loadDemo);
         $("#welcomeImportBtn").addEventListener("click", () => { $("#welcome").classList.remove("open"); $("#importDialog").showModal(); });
         $$("[data-close]").forEach(btn => btn.addEventListener("click", () => $(`#${btn.dataset.close}`).close()));
@@ -1667,7 +1713,6 @@
           member.updatedAt = new Date().toISOString();
           save();
           $("#memberDialog").close();
-          render();
         });
         $("#duplicateMemberBtn").addEventListener("click", () => {
           const original = memberById($("#memberForm").elements.id.value);
@@ -1676,7 +1721,6 @@
           data.members.push(copy);
           save();
           $("#memberDialog").close();
-          render();
           openMember(copy.id);
         });
         $("#deleteNoteBtn").addEventListener("click", () => {
@@ -1685,7 +1729,6 @@
           data.familyNotes = data.familyNotes.filter(n => n.id !== noteId);
           save();
           $("#noteDialog").close();
-          render();
         });
         $("#deleteEventBtn").addEventListener("click", () => {
           const eventId = $("#eventForm").elements.id.value;
@@ -1693,7 +1736,6 @@
           data.customEvents = data.customEvents.filter(e => e.id !== eventId);
           save();
           $("#eventDialog").close();
-          render();
         });
         $("#photoInput").addEventListener("change", async event => {
           const photo = await processPhoto(event.target.files[0]);
@@ -1714,7 +1756,6 @@
           if (!event.target.name) return;
           data.settings[event.target.name] = event.target.value;
           save();
-          render();
         });
         ["filterName", "filterLocation", "filterTag", "filterStatus", "filterMonth", "sortMembers", "noteSearch", "noteCategoryFilter"].forEach(inputId => {
           $(`#${inputId}`).addEventListener("input", render);

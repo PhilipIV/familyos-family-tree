@@ -1,0 +1,1781 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FamilyOS Family Tree</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#b65f3a">
+  <style>
+    :root {
+      --bg: #f7f1e9;
+      --surface: #fffaf4;
+      --panel: #fff;
+      --text: #2d2520;
+      --muted: #70645c;
+      --line: #e5d8cc;
+      --accent: #b65f3a;
+      --accent-2: #2f7d6d;
+      --danger: #b33a3a;
+      --focus: #1e6091;
+      --shadow: 0 10px 30px rgba(78, 52, 36, .12);
+      --font-scale: 1;
+      --card-w: 190px;
+      --card-h: 108px;
+    }
+
+    [data-theme="dark"] {
+      --bg: #1f1b18;
+      --surface: #29231f;
+      --panel: #332c27;
+      --text: #f5eee7;
+      --muted: #cabdb2;
+      --line: #5a4b42;
+      --accent: #df8a63;
+      --accent-2: #68b7a7;
+      --danger: #ef7777;
+      --shadow: 0 10px 30px rgba(0, 0, 0, .35);
+    }
+
+    [data-theme="light"] {
+      --bg: #f5f7f8;
+      --surface: #fff;
+      --panel: #fff;
+      --accent: #6e6a45;
+      --accent-2: #28666e;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: calc(15px * var(--font-scale));
+      line-height: 1.45;
+    }
+
+    button, input, select, textarea {
+      font: inherit;
+      color: inherit;
+    }
+
+    button, .button {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 8px;
+      padding: .62rem .78rem;
+      min-height: 42px;
+      cursor: pointer;
+      display: inline-flex;
+      gap: .45rem;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+    }
+
+    button:hover, .button:hover { border-color: var(--accent); }
+    button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
+    }
+    button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    button.ghost { background: transparent; }
+    button.danger { color: #fff; background: var(--danger); border-color: var(--danger); }
+    button.icon { width: 42px; padding: 0; font-size: 1.1rem; }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      padding: .65rem .72rem;
+      min-height: 42px;
+    }
+    textarea { min-height: 105px; resize: vertical; }
+    label { font-weight: 700; font-size: .88rem; display: grid; gap: .35rem; }
+    small, .muted { color: var(--muted); }
+
+    .app {
+      min-height: 100%;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: auto minmax(180px, 1fr) auto;
+      gap: .75rem;
+      align-items: center;
+      padding: .7rem .85rem;
+      background: var(--surface);
+      border-bottom: 1px solid var(--line);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .brand {
+      display: flex;
+      gap: .65rem;
+      align-items: center;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+    }
+    .header-actions { display: flex; gap: .5rem; flex-wrap: wrap; justify-content: end; }
+    .search-wrap { position: relative; }
+    .search-results {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      right: 0;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      max-height: 340px;
+      overflow: auto;
+      z-index: 20;
+      display: none;
+    }
+    .search-results.open { display: block; }
+    .search-result { padding: .7rem; border-bottom: 1px solid var(--line); cursor: pointer; }
+    .search-result:hover { background: rgba(182, 95, 58, .1); }
+
+    .shell {
+      display: grid;
+      grid-template-columns: 230px minmax(0, 1fr);
+      min-height: 0;
+    }
+    aside {
+      background: var(--surface);
+      border-right: 1px solid var(--line);
+      padding: .75rem;
+      overflow-y: auto;
+    }
+    nav { display: grid; gap: .35rem; }
+    .nav-btn {
+      justify-content: start;
+      width: 100%;
+      background: transparent;
+      border-color: transparent;
+    }
+    .nav-btn.active { background: rgba(182, 95, 58, .13); border-color: rgba(182, 95, 58, .25); }
+    main { min-width: 0; overflow: hidden; }
+    .view { display: none; height: 100%; min-height: calc(100vh - 65px); overflow: auto; }
+    .view.active { display: block; }
+    .content { padding: 1rem; max-width: 1280px; margin: 0 auto; }
+
+    .tree-view { height: calc(100vh - 65px); display: grid; grid-template-rows: auto 1fr; }
+    .tree-toolbar {
+      display: flex;
+      gap: .5rem;
+      align-items: center;
+      justify-content: space-between;
+      padding: .65rem;
+      border-bottom: 1px solid var(--line);
+      background: var(--bg);
+      flex-wrap: wrap;
+    }
+    .legend { display: flex; gap: .55rem; flex-wrap: wrap; align-items: center; font-size: .86rem; }
+    .legend span { display: inline-flex; align-items: center; gap: .25rem; }
+    .sample-line { width: 30px; height: 0; border-top: 3px solid var(--accent-2); display: inline-block; }
+    .sample-line.dashed { border-top-style: dashed; }
+    .sample-line.dotted { border-top-style: dotted; }
+    .sample-line.double { border-top: 4px double var(--accent); }
+
+    .tree-canvas {
+      position: relative;
+      overflow: hidden;
+      background:
+        linear-gradient(var(--line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--line) 1px, transparent 1px);
+      background-size: 36px 36px;
+      touch-action: none;
+      min-height: 500px;
+    }
+    .tree-stage {
+      position: absolute;
+      inset: 0;
+      transform-origin: 0 0;
+      width: 5000px;
+      height: 3000px;
+    }
+    .links { position: absolute; inset: 0; width: 5000px; height: 3000px; pointer-events: none; overflow: visible; }
+    .link { fill: none; stroke: var(--accent-2); stroke-width: 3; }
+    .link.adopted { stroke-dasharray: 9 6; }
+    .link.step { stroke-dasharray: 2 7; stroke-linecap: round; }
+    .link.foster { stroke-dasharray: 12 4 3 4; }
+    .link.guardian { stroke-dasharray: 4 4; stroke-width: 4; }
+    .link.partner { stroke: var(--accent); stroke-width: 4; }
+    .link.former { stroke-dasharray: 10 7; opacity: .75; }
+    .rel-label {
+      font-size: 12px;
+      fill: var(--text);
+      paint-order: stroke;
+      stroke: var(--panel);
+      stroke-width: 4px;
+      stroke-linejoin: round;
+    }
+
+    .person-card {
+      position: absolute;
+      width: var(--card-w);
+      min-height: var(--card-h);
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 8px 20px rgba(58, 38, 26, .12);
+      padding: .55rem;
+      display: grid;
+      grid-template-columns: 52px 1fr;
+      gap: .5rem;
+      cursor: pointer;
+    }
+    .person-card.deceased { border-style: double; opacity: .82; }
+    .person-card.archived { opacity: .5; }
+    .avatar {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: #ddc7b7;
+      color: #4b3528;
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+      overflow: hidden;
+      flex: none;
+    }
+    .avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .person-name { font-weight: 900; overflow-wrap: anywhere; }
+    .person-meta { color: var(--muted); font-size: .83rem; display: grid; gap: .1rem; }
+    .collapse-toggle {
+      position: absolute;
+      right: 5px;
+      bottom: 5px;
+      width: 26px;
+      min-height: 26px;
+      height: 26px;
+      border-radius: 50%;
+      padding: 0;
+      font-size: .8rem;
+      z-index: 1;
+    }
+
+    .grid { display: grid; gap: 1rem; }
+    .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 1rem;
+      box-shadow: 0 4px 14px rgba(58, 38, 26, .06);
+    }
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: .75rem;
+      margin-bottom: 1rem;
+    }
+    .section-title h1, .section-title h2 { margin: 0; line-height: 1.1; }
+    .filters { display: grid; grid-template-columns: repeat(6, minmax(120px, 1fr)); gap: .6rem; margin-bottom: 1rem; }
+    .member-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(245px, 1fr)); gap: .75rem; }
+    .member-row {
+      display: grid;
+      grid-template-columns: 54px 1fr auto;
+      gap: .7rem;
+      align-items: center;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: .7rem;
+    }
+    .tags { display: flex; flex-wrap: wrap; gap: .25rem; }
+    .tag { background: rgba(47, 125, 109, .13); color: var(--text); border-radius: 999px; padding: .1rem .45rem; font-size: .78rem; }
+    .status-pill { border: 1px solid var(--line); border-radius: 999px; padding: .15rem .45rem; font-size: .78rem; white-space: nowrap; }
+    .empty {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--muted);
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      background: rgba(255,255,255,.35);
+    }
+    .chart-bar { display: grid; grid-template-columns: 150px 1fr auto; gap: .5rem; align-items: center; margin: .35rem 0; }
+    .bar-track { height: 12px; background: var(--line); border-radius: 999px; overflow: hidden; }
+    .bar-fill { height: 100%; background: var(--accent-2); }
+
+    dialog {
+      width: min(940px, calc(100vw - 1rem));
+      max-height: calc(100vh - 1rem);
+      border: 0;
+      border-radius: 10px;
+      padding: 0;
+      background: var(--panel);
+      color: var(--text);
+      box-shadow: var(--shadow);
+    }
+    dialog::backdrop { background: rgba(20, 15, 12, .48); }
+    .modal-head, .modal-foot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: .75rem;
+      padding: .8rem 1rem;
+      border-bottom: 1px solid var(--line);
+    }
+    .modal-foot { border-top: 1px solid var(--line); border-bottom: 0; justify-content: end; flex-wrap: wrap; }
+    .modal-body { padding: 1rem; overflow: auto; max-height: calc(100vh - 150px); }
+    .form-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .8rem; }
+    .wide { grid-column: 1 / -1; }
+    .profile-layout { display: grid; grid-template-columns: 220px 1fr; gap: 1rem; }
+    .profile-photo { width: 150px; height: 150px; margin: 0 auto .75rem; border-radius: 50%; }
+    .actions-row { display: flex; gap: .5rem; flex-wrap: wrap; }
+    .tabs { display: flex; gap: .35rem; flex-wrap: wrap; margin-bottom: .8rem; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .saved {
+      position: fixed;
+      right: 1rem;
+      bottom: 1rem;
+      background: var(--accent-2);
+      color: #fff;
+      padding: .7rem .9rem;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      opacity: 0;
+      transform: translateY(8px);
+      transition: .2s;
+      z-index: 60;
+    }
+    .saved.show { opacity: 1; transform: translateY(0); }
+    .warning {
+      background: rgba(179, 58, 58, .12);
+      border: 1px solid rgba(179, 58, 58, .35);
+      border-radius: 8px;
+      padding: .7rem;
+    }
+    .welcome {
+      position: fixed;
+      inset: 0;
+      background: rgba(37, 27, 20, .48);
+      display: none;
+      place-items: center;
+      z-index: 70;
+      padding: 1rem;
+    }
+    .welcome.open { display: grid; }
+    .welcome-panel {
+      width: min(680px, 100%);
+      background: var(--panel);
+      border-radius: 12px;
+      padding: 1.25rem;
+      box-shadow: var(--shadow);
+    }
+    .hidden-file { display: none; }
+
+    @media (max-width: 980px) {
+      header { grid-template-columns: auto 1fr; }
+      .search-wrap { grid-column: 1 / -1; order: 2; }
+      .header-actions { justify-content: start; }
+      .shell { grid-template-columns: 1fr; }
+      aside { display: none; position: fixed; top: 64px; bottom: 0; left: 0; width: 260px; z-index: 30; box-shadow: var(--shadow); }
+      aside.open { display: block; }
+      .filters, .grid.four, .grid.three, .grid.two, .form-grid, .profile-layout { grid-template-columns: 1fr; }
+      .view { min-height: calc(100vh - 120px); }
+      .tree-view { height: calc(100vh - 120px); }
+    }
+
+    @media (max-width: 560px) {
+      .brand span:last-child { display: none; }
+      .header-actions button:not(.mobile-keep) { width: 42px; padding: 0; font-size: 0; }
+      .header-actions button:not(.mobile-keep)::first-letter { font-size: 1rem; }
+      .member-row { grid-template-columns: 48px 1fr; }
+      .member-row .actions-row { grid-column: 1 / -1; }
+      :root { --card-w: 170px; }
+    }
+
+    @media print {
+      header, aside, .tree-toolbar, .modal-foot, .actions-row, button, input, select, textarea { display: none !important; }
+      body { background: #fff; color: #000; }
+      .shell { display: block; }
+      .view.active { display: block; overflow: visible; height: auto; min-height: 0; }
+      .card, .member-row, .person-card { box-shadow: none; border-color: #aaa; }
+      .tree-canvas { overflow: visible; height: auto; min-height: 900px; background: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+    <header>
+      <div class="brand"><button class="icon mobile-keep" id="menuBtn" aria-label="Toggle navigation">☰</button><div class="brand-mark" aria-hidden="true">F</div><span id="brandName">FamilyOS Family Tree</span></div>
+      <div class="search-wrap">
+        <label class="sr-only" for="globalSearch">Search family</label>
+        <input id="globalSearch" type="search" placeholder="Search names, locations, notes, tags..." autocomplete="off" aria-label="Search family">
+        <div id="searchResults" class="search-results" role="listbox" aria-label="Search results"></div>
+      </div>
+      <div class="header-actions">
+        <button class="primary mobile-keep" id="addMemberBtn">＋ Add Family Member</button>
+        <button id="fitBtn">⛶ Fit Tree</button>
+        <button id="exportBtn">⇩ Export</button>
+        <button id="importBtn">⇧ Import</button>
+        <button id="settingsBtn" aria-label="Settings">⚙ Settings</button>
+      </div>
+    </header>
+    <div class="shell">
+      <aside id="sidebar">
+        <nav aria-label="Main navigation">
+          <button class="nav-btn active" data-view="tree">🌳 Family Tree</button>
+          <button class="nav-btn" data-view="members">👥 Family Members</button>
+          <button class="nav-btn" data-view="events">📅 Birthdays</button>
+          <button class="nav-btn" data-view="notes">📝 Family Notes</button>
+          <button class="nav-btn" data-view="stats">📊 Statistics</button>
+          <button class="nav-btn" data-view="settings">⚙ Settings</button>
+        </nav>
+      </aside>
+      <main>
+        <section id="treeView" class="view active tree-view" aria-label="Family tree">
+          <div class="tree-toolbar">
+            <div class="legend" aria-label="Relationship legend">
+              <span><i class="sample-line"></i> Biological</span>
+              <span><i class="sample-line dashed"></i> Adopted</span>
+              <span><i class="sample-line dotted"></i> Step</span>
+              <span><i class="sample-line double"></i> Partner</span>
+              <span>◇ Guardian/Foster labeled on line</span>
+              <span>Double card border = deceased</span>
+            </div>
+            <div class="actions-row">
+              <button id="zoomOutBtn" aria-label="Zoom out">−</button>
+              <button id="zoomInBtn" aria-label="Zoom in">＋</button>
+              <button id="printTreeBtn">Print Tree</button>
+            </div>
+          </div>
+          <div id="treeCanvas" class="tree-canvas" tabindex="0" aria-label="Pan and zoom family tree">
+            <div id="treeStage" class="tree-stage">
+              <svg id="treeLinks" class="links" aria-hidden="true"></svg>
+              <div id="treeNodes"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="membersView" class="view">
+          <div class="content">
+            <div class="section-title"><h1>Family Members</h1><button class="primary" id="addMemberBtn2">＋ Add Member</button></div>
+            <div class="filters">
+              <input id="filterName" placeholder="Filter by name">
+              <input id="filterLocation" placeholder="Location">
+              <input id="filterTag" placeholder="Tag">
+              <select id="filterStatus"><option value="">Living/deceased</option><option value="living">Living</option><option value="deceased">Deceased</option></select>
+              <select id="filterMonth"><option value="">Birth month</option></select>
+              <select id="sortMembers"><option value="lastName">Sort: Last name</option><option value="firstName">First name</option><option value="age">Age</option><option value="birthDate">Birth date</option><option value="dateAdded">Date added</option><option value="relationship">Relationship</option></select>
+            </div>
+            <div id="memberList" class="member-list"></div>
+          </div>
+        </section>
+
+        <section id="eventsView" class="view">
+          <div class="content">
+            <div class="section-title"><h1>Birthdays and Important Dates</h1><button id="addEventBtn">＋ Add Custom Event</button></div>
+            <div id="eventsList" class="grid two"></div>
+          </div>
+        </section>
+
+        <section id="notesView" class="view">
+          <div class="content">
+            <div class="section-title"><h1>Family Notes</h1><button class="primary" id="addNoteBtn">＋ Add Note</button></div>
+            <div class="filters"><input id="noteSearch" placeholder="Search notes"><select id="noteCategoryFilter"><option value="">All categories</option></select></div>
+            <div id="notesList" class="grid two"></div>
+          </div>
+        </section>
+
+        <section id="statsView" class="view">
+          <div class="content">
+            <div class="section-title"><h1>Statistics</h1></div>
+            <div id="statsGrid" class="grid four"></div>
+            <div class="grid two" style="margin-top:1rem"><div class="card"><h2>Common Family Names</h2><div id="nameChart"></div></div><div class="card"><h2>Members by Location</h2><div id="locationChart"></div></div></div>
+          </div>
+        </section>
+
+        <section id="settingsView" class="view">
+          <div class="content">
+            <div class="section-title"><h1>Settings</h1></div>
+            <div id="storageWarning" class="warning" style="display:none"></div>
+            <form id="settingsForm" class="grid two card">
+              <label>Family tree name<input name="treeName"></label>
+              <label>Primary person<select name="primaryPerson"></select></label>
+              <label>Default family branch<input name="defaultBranch"></label>
+              <label>Date format<select name="dateFormat"><option value="long">Long</option><option value="iso">YYYY-MM-DD</option><option value="short">Short</option></select></label>
+              <label>Theme<select name="theme"><option value="warm">Warm family theme</option><option value="light">Light theme</option><option value="dark">Dark theme</option></select></label>
+              <label>Font size<select name="fontSize"><option value="0.92">Small</option><option value="1">Comfortable</option><option value="1.12">Large</option></select></label>
+              <label>Profile cards<select name="cardDensity"><option value="comfortable">Comfortable</option><option value="compact">Compact</option></select></label>
+              <label><span>Show photos</span><select name="showPhotos"><option value="true">Show</option><option value="false">Hide</option></select></label>
+              <label><span>Show birth years</span><select name="showBirthYears"><option value="true">Show</option><option value="false">Hide</option></select></label>
+              <label><span>Show relationship labels</span><select name="showRelationLabels"><option value="true">Show</option><option value="false">Hide</option></select></label>
+              <label><span>Confirm before deleting</span><select name="confirmDelete"><option value="true">Enabled</option><option value="false">Disabled</option></select></label>
+              <label><span>Private notes in exports</span><select name="exportPrivateNotes"><option value="true">Include</option><option value="false">Exclude</option></select></label>
+              <p class="wide muted">Your family information is stored locally in this browser. It is not uploaded to a server. Export regular backups to prevent accidental data loss.</p>
+              <div class="wide actions-row">
+                <button type="button" id="backupBtn">Create Backup</button>
+                <button type="button" id="restoreBackupBtn">Restore Backup</button>
+                <button type="button" id="printDirectoryBtn">Print Directory</button>
+                <button type="button" class="danger" id="clearDataBtn">Clear All Data</button>
+              </div>
+            </form>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <dialog id="memberDialog" aria-labelledby="memberDialogTitle">
+    <form id="memberForm" method="dialog">
+      <div class="modal-head"><h2 id="memberDialogTitle">Family Member</h2><button type="button" class="icon" data-close="memberDialog" aria-label="Close">×</button></div>
+      <div class="modal-body">
+        <input type="hidden" name="id">
+        <input type="hidden" name="photo">
+        <div class="profile-layout">
+          <div class="card">
+            <div class="avatar profile-photo" id="photoPreview"></div>
+            <label>Profile photo<input id="photoInput" type="file" accept="image/png,image/jpeg,image/jpg,image/webp"></label>
+            <div class="actions-row" style="margin-top:.6rem"><button type="button" id="removePhotoBtn">Remove Photo</button></div>
+            <p class="muted">Large images are resized before being stored locally.</p>
+          </div>
+          <div>
+            <div class="tabs" role="tablist">
+              <button type="button" class="tab active" data-tab="basic">Basic</button>
+              <button type="button" class="tab" data-tab="dates">Dates</button>
+              <button type="button" class="tab" data-tab="contact">Contact</button>
+              <button type="button" class="tab" data-tab="personal">Personal</button>
+              <button type="button" class="tab" data-tab="notes">Notes</button>
+            </div>
+            <div class="tab-panel active" data-panel="basic">
+              <div class="form-grid">
+                <label>First name<input name="firstName" required></label>
+                <label>Middle name<input name="middleName"></label>
+                <label>Last name<input name="lastName"></label>
+                <label>Preferred name<input name="preferredName"></label>
+                <label>Maiden/previous name<input name="maidenName"></label>
+                <label>Gender or identity<input name="gender"></label>
+                <label>Pronouns<input name="pronouns"></label>
+                <label>Relationship to primary user<input name="relationshipToPrimary"></label>
+                <label>Living status<select name="status"><option value="living">Living</option><option value="deceased">Deceased</option></select></label>
+                <label class="wide">Tags, comma separated<input name="tags"></label>
+              </div>
+            </div>
+            <div class="tab-panel" data-panel="dates">
+              <div class="form-grid">
+                <label>Date of birth<input name="birthDate" type="date"></label>
+                <label>Date of death<input name="deathDate" type="date"></label>
+                <label>Anniversary<input name="anniversary" type="date"></label>
+                <label class="wide">Other important dates<textarea name="otherDates" placeholder="One per line, for example: 2004-08-14 - Immigration"></textarea></label>
+              </div>
+            </div>
+            <div class="tab-panel" data-panel="contact">
+              <div class="form-grid">
+                <label>Phone<input name="phone"></label>
+                <label>Email<input name="email" type="email"></label>
+                <label>Street address<input name="street"></label>
+                <label>City<input name="city"></label>
+                <label>Province or state<input name="region"></label>
+                <label>Postal or ZIP<input name="postal"></label>
+                <label>Country<input name="country"></label>
+              </div>
+            </div>
+            <div class="tab-panel" data-panel="personal">
+              <div class="form-grid">
+                <label>Occupation<input name="occupation"></label>
+                <label>Employer<input name="employer"></label>
+                <label>Education<input name="education"></label>
+                <label>Birthplace<input name="birthplace"></label>
+                <label>Current location<input name="currentLocation"></label>
+                <label>Cultural background<input name="culturalBackground"></label>
+                <label>Languages<input name="languages"></label>
+                <label>Hobbies<input name="hobbies"></label>
+                <label>Interests<input name="interests"></label>
+              </div>
+            </div>
+            <div class="tab-panel" data-panel="notes">
+              <div class="form-grid">
+                <label class="wide">General notes<textarea name="generalNotes"></textarea></label>
+                <label class="wide">Biography<textarea name="biography"></textarea></label>
+                <label class="wide">Family stories<textarea name="familyStories"></textarea></label>
+                <label class="wide">Important memories<textarea name="memories"></textarea></label>
+                <label class="wide">Traditions<textarea name="traditions"></textarea></label>
+                <label class="wide">Recipes<textarea name="recipes"></textarea></label>
+                <label class="wide">Private notes<textarea name="privateNotes"></textarea></label>
+                <label class="wide">Medical family-history notes<textarea name="medicalNotes"></textarea></label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" id="duplicateMemberBtn">Duplicate</button>
+        <button type="button" id="archiveMemberBtn">Archive</button>
+        <button type="button" class="danger" id="deleteMemberBtn">Delete</button>
+        <button type="button" data-close="memberDialog">Cancel</button>
+        <button class="primary" value="save">Save Member</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="profileDialog" aria-labelledby="profileTitle">
+    <div class="modal-head"><h2 id="profileTitle">Profile</h2><button type="button" class="icon" data-close="profileDialog" aria-label="Close">×</button></div>
+    <div class="modal-body" id="profileBody"></div>
+    <div class="modal-foot">
+      <button id="profilePrintBtn">Print Profile</button>
+      <button id="editProfileBtn">Edit</button>
+      <button class="primary" data-close="profileDialog">Done</button>
+    </div>
+  </dialog>
+
+  <dialog id="relationDialog" aria-labelledby="relationTitle">
+    <form id="relationForm" method="dialog">
+      <div class="modal-head"><h2 id="relationTitle">Relationship</h2><button type="button" class="icon" data-close="relationDialog" aria-label="Close">×</button></div>
+      <div class="modal-body form-grid">
+        <input type="hidden" name="baseId">
+        <label>Action<select name="mode"><option value="new">Create new member</option><option value="existing">Link existing member</option></select></label>
+        <label>Relationship<select name="kind"><option value="parent">Parent</option><option value="child">Child</option><option value="sibling">Sibling</option><option value="partner">Current partner</option><option value="formerPartner">Former partner</option><option value="guardian">Guardian</option></select></label>
+        <label>Relationship type<select name="type"><option value="biological">Biological</option><option value="adopted">Adopted</option><option value="step">Step</option><option value="foster">Foster</option><option value="guardian">Guardian</option><option value="spouse">Spouse</option><option value="partner">Partner</option><option value="formerSpouse">Former spouse</option><option value="formerPartner">Former partner</option></select></label>
+        <label class="existing-field wide" style="display:none">Existing member<select name="existingId"></select></label>
+        <label class="new-field">First name<input name="firstName"></label>
+        <label class="new-field">Last name<input name="lastName"></label>
+        <label class="new-field">Date of birth<input name="birthDate" type="date"></label>
+        <label>Start date<input name="startDate" type="date"></label>
+        <label>End date<input name="endDate" type="date"></label>
+        <label>Marriage date<input name="marriageDate" type="date"></label>
+        <label>Divorce/separation date<input name="divorceDate" type="date"></label>
+      </div>
+      <div class="modal-foot"><button type="button" data-close="relationDialog">Cancel</button><button class="primary" value="save">Save Relationship</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="noteDialog" aria-labelledby="noteTitle">
+    <form id="noteForm" method="dialog">
+      <div class="modal-head"><h2 id="noteTitle">Family Note</h2><button type="button" class="icon" data-close="noteDialog" aria-label="Close">×</button></div>
+      <div class="modal-body form-grid">
+        <input type="hidden" name="id">
+        <label>Title<input name="title" required></label>
+        <label>Category<select name="category"></select></label>
+        <label>Tags<input name="tags"></label>
+        <label>Pinned<select name="pinned"><option value="false">No</option><option value="true">Yes</option></select></label>
+        <label class="wide">Note<textarea name="body" required></textarea></label>
+      </div>
+      <div class="modal-foot"><button type="button" id="deleteNoteBtn" class="danger">Delete</button><button type="button" data-close="noteDialog">Cancel</button><button class="primary" value="save">Save Note</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="eventDialog" aria-labelledby="eventTitle">
+    <form id="eventForm" method="dialog">
+      <div class="modal-head"><h2 id="eventTitle">Custom Event</h2><button type="button" class="icon" data-close="eventDialog" aria-label="Close">×</button></div>
+      <div class="modal-body form-grid">
+        <input type="hidden" name="id">
+        <label>Title<input name="title" required></label>
+        <label>Date<input name="date" type="date" required></label>
+        <label>Type<select name="type"><option value="custom">Custom</option><option value="anniversary">Anniversary</option><option value="reunion">Reunion</option><option value="memorial">Memorial</option></select></label>
+        <label class="wide">Notes<textarea name="notes"></textarea></label>
+      </div>
+      <div class="modal-foot"><button type="button" id="deleteEventBtn" class="danger">Delete</button><button type="button" data-close="eventDialog">Cancel</button><button class="primary" value="save">Save Event</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="importDialog" aria-labelledby="importTitle">
+    <div class="modal-head"><h2 id="importTitle">Import Data</h2><button type="button" class="icon" data-close="importDialog" aria-label="Close">×</button></div>
+    <div class="modal-body">
+      <input id="importFile" class="hidden-file" type="file" accept="application/json,.json">
+      <button id="chooseImportBtn">Choose JSON Backup</button>
+      <div id="importSummary" style="margin-top:1rem"></div>
+    </div>
+    <div class="modal-foot"><button data-close="importDialog">Cancel</button><button class="primary" id="confirmImportBtn" disabled>Import and Replace Current Data</button></div>
+  </dialog>
+
+  <div id="welcome" class="welcome" role="dialog" aria-labelledby="welcomeTitle" aria-modal="true">
+    <div class="welcome-panel">
+      <h1 id="welcomeTitle">Welcome to FamilyOS Family Tree</h1>
+      <p class="muted">Keep your family tree private on this device. Start fresh, load removable example data, or import an existing backup.</p>
+      <div class="grid three">
+        <button class="primary" id="startNewBtn">Start a New Family Tree</button>
+        <button id="loadDemoBtn">Load Example Family</button>
+        <button id="welcomeImportBtn">Import Existing Backup</button>
+      </div>
+    </div>
+  </div>
+  <div id="saved" class="saved" role="status" aria-live="polite">Saved</div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      if ("serviceWorker" in navigator && location.protocol !== "file:") {
+        window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {}));
+      }
+
+      const STORAGE_KEY = "familyos.familyTree.v1";
+      const BACKUP_KEY = "familyos.familyTree.backup";
+      const VERSION = "1.0";
+      const categories = ["Family History", "Traditions", "Recipes", "Important Documents", "Medical History", "Reunions", "Stories", "General"];
+      const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+      const $ = (selector, root = document) => root.querySelector(selector);
+      const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
+
+      const blankData = () => ({
+        appVersion: VERSION,
+        settings: {
+          treeName: "FamilyOS Family Tree",
+          primaryPerson: "",
+          defaultBranch: "",
+          dateFormat: "long",
+          theme: "warm",
+          fontSize: "1",
+          cardDensity: "comfortable",
+          showPhotos: "true",
+          showBirthYears: "true",
+          showRelationLabels: "true",
+          confirmDelete: "true",
+          exportPrivateNotes: "true",
+          firstRunComplete: false
+        },
+        members: [],
+        relationships: [],
+        familyNotes: [],
+        customEvents: []
+      });
+
+      let data = loadData();
+      let activeView = "tree";
+      let activeProfileId = "";
+      let pendingImport = null;
+      let collapsed = new Set();
+      let treeState = { scale: 1, x: 80, y: 80, dragging: false, lastX: 0, lastY: 0 };
+
+      function id(prefix) {
+        return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+      }
+
+      function loadData() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return blankData();
+          const parsed = JSON.parse(raw);
+          return migrate(parsed);
+        } catch (err) {
+          console.warn("FamilyOS storage could not be read.", err);
+          return blankData();
+        }
+      }
+
+      function migrate(parsed) {
+        const base = blankData();
+        if (!parsed || typeof parsed !== "object") return base;
+        return {
+          appVersion: VERSION,
+          settings: { ...base.settings, ...(parsed.settings || {}) },
+          members: Array.isArray(parsed.members) ? parsed.members : [],
+          relationships: Array.isArray(parsed.relationships) ? parsed.relationships : [],
+          familyNotes: Array.isArray(parsed.familyNotes) ? parsed.familyNotes : [],
+          customEvents: Array.isArray(parsed.customEvents) ? parsed.customEvents : []
+        };
+      }
+
+      function save(show = true) {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+          if (show) showSaved();
+          checkStorage();
+        } catch (err) {
+          alert("This browser storage is full or unavailable. Export a backup, remove large photos, or clear old data.");
+        }
+      }
+
+      function showSaved() {
+        const el = $("#saved");
+        el.classList.add("show");
+        clearTimeout(showSaved.timer);
+        showSaved.timer = setTimeout(() => el.classList.remove("show"), 1300);
+      }
+
+      function escapeHTML(value) {
+        return String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
+      }
+
+      function normalizeTags(value) {
+        if (Array.isArray(value)) return value.map(v => String(v).trim()).filter(Boolean);
+        return String(value || "").split(",").map(v => v.trim()).filter(Boolean);
+      }
+
+      function fullName(member) {
+        return [member.firstName, member.middleName, member.lastName].filter(Boolean).join(" ") || "Unnamed Person";
+      }
+
+      function displayName(member) {
+        const preferred = member.preferredName ? ` "${member.preferredName}"` : "";
+        return [member.firstName, preferred, member.lastName].filter(Boolean).join(" ").replace(/\s+/g, " ").trim() || "Unnamed Person";
+      }
+
+      function initials(member) {
+        return [member.firstName, member.lastName].filter(Boolean).map(v => v[0]).join("").slice(0, 2).toUpperCase() || "?";
+      }
+
+      function avatar(member, sizeClass = "") {
+        if (data.settings.showPhotos === "false") return `<div class="avatar ${sizeClass}">${escapeHTML(initials(member))}</div>`;
+        return `<div class="avatar ${sizeClass}">${member.photo ? `<img alt="" src="${member.photo}">` : escapeHTML(initials(member))}</div>`;
+      }
+
+      function dateValue(date) {
+        if (!date) return null;
+        const d = new Date(`${date}T12:00:00`);
+        return Number.isNaN(d.getTime()) ? null : d;
+      }
+
+      function formatDate(date) {
+        const d = dateValue(date);
+        if (!d) return "";
+        if (data.settings.dateFormat === "iso") return date;
+        if (data.settings.dateFormat === "short") return d.toLocaleDateString();
+        return d.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+      }
+
+      function age(member) {
+        const birth = dateValue(member.birthDate);
+        if (!birth) return "";
+        const end = member.status === "deceased" && dateValue(member.deathDate) ? dateValue(member.deathDate) : new Date();
+        let years = end.getFullYear() - birth.getFullYear();
+        const beforeBirthday = end.getMonth() < birth.getMonth() || (end.getMonth() === birth.getMonth() && end.getDate() < birth.getDate());
+        if (beforeBirthday) years--;
+        return years >= 0 ? years : "";
+      }
+
+      function lifespan(member) {
+        const birth = member.birthDate ? String(member.birthDate).slice(0, 4) : "";
+        const death = member.deathDate ? String(member.deathDate).slice(0, 4) : "";
+        if (birth && death) return `${birth}-${death}`;
+        if (birth && member.status === "deceased") return `${birth}-`;
+        if (birth) return `${birth}, age ${age(member)}`;
+        return "";
+      }
+
+      function locationText(member) {
+        return member.currentLocation || [member.city, member.region, member.country].filter(Boolean).join(", ");
+      }
+
+      function memberById(memberId) {
+        return data.members.find(member => member.id === memberId);
+      }
+
+      function relationsFor(memberId) {
+        return data.relationships.filter(rel => rel.from === memberId || rel.to === memberId);
+      }
+
+      function relationLabel(rel) {
+        const labels = {
+          biological: "bio", adopted: "adopted", step: "step", foster: "foster", guardian: "guardian",
+          spouse: "spouse", partner: "partner", formerSpouse: "former spouse", formerPartner: "former partner"
+        };
+        return labels[rel.type] || rel.type || rel.kind;
+      }
+
+      function setView(view) {
+        activeView = view;
+        $$(".view").forEach(el => el.classList.toggle("active", el.id === `${view}View`));
+        $$(".nav-btn").forEach(btn => btn.classList.toggle("active", btn.dataset.view === view));
+        $("#sidebar").classList.remove("open");
+        render();
+      }
+
+      function applySettings() {
+        document.body.dataset.theme = data.settings.theme === "warm" ? "" : data.settings.theme;
+        document.documentElement.style.setProperty("--font-scale", data.settings.fontSize || "1");
+        document.documentElement.style.setProperty("--card-h", data.settings.cardDensity === "compact" ? "92px" : "108px");
+        $("#brandName").textContent = data.settings.treeName || "FamilyOS Family Tree";
+      }
+
+      function render() {
+        applySettings();
+        renderSettings();
+        if (activeView === "tree") renderTree();
+        if (activeView === "members") renderMembers();
+        if (activeView === "events") renderEvents();
+        if (activeView === "notes") renderNotes();
+        if (activeView === "stats") renderStats();
+        checkStorage();
+      }
+
+      function renderTree() {
+        const nodesEl = $("#treeNodes");
+        const linksEl = $("#treeLinks");
+        nodesEl.innerHTML = "";
+        linksEl.innerHTML = "";
+        if (!data.members.length) {
+          nodesEl.innerHTML = `<div class="empty" style="position:absolute;left:80px;top:80px;width:360px">No family members yet. Add a member or load example data to begin.</div>`;
+          return;
+        }
+        const layout = computeLayout();
+        for (const rel of data.relationships) {
+          const a = layout.positions.get(rel.from);
+          const b = layout.positions.get(rel.to);
+          if (!a || !b) continue;
+          const isPartner = ["partner", "spouse", "formerPartner", "formerSpouse"].includes(rel.type) || rel.kind === "partner";
+          const x1 = a.x + 95, y1 = a.y + (isPartner ? 54 : 104);
+          const x2 = b.x + 95, y2 = b.y + (isPartner ? 54 : 4);
+          const midY = isPartner ? y1 : y1 + Math.max(35, (y2 - y1) / 2);
+          const path = isPartner
+            ? `M ${x1} ${y1} L ${x2} ${y2}`
+            : `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`;
+          const cls = `link ${rel.type || ""} ${rel.status === "former" || rel.kind === "formerPartner" ? "former" : ""} ${isPartner ? "partner" : ""}`;
+          linksEl.insertAdjacentHTML("beforeend", `<path class="${cls}" d="${path}"></path>`);
+          if (data.settings.showRelationLabels !== "false") {
+            linksEl.insertAdjacentHTML("beforeend", `<text class="rel-label" x="${(x1 + x2) / 2}" y="${isPartner ? y1 - 7 : midY - 5}" text-anchor="middle">${escapeHTML(relationLabel(rel))}</text>`);
+          }
+        }
+        for (const member of layout.members) {
+          const pos = layout.positions.get(member.id);
+          const hasChildren = data.relationships.some(rel => rel.from === member.id && rel.kind === "parentChild");
+          nodesEl.insertAdjacentHTML("beforeend", `
+            <article class="person-card ${member.status === "deceased" ? "deceased" : ""} ${member.archived ? "archived" : ""}" style="left:${pos.x}px;top:${pos.y}px" tabindex="0" data-member-id="${member.id}" aria-label="${escapeHTML(fullName(member))}">
+              ${avatar(member)}
+              <div>
+                <div class="person-name">${escapeHTML(displayName(member))}</div>
+                <div class="person-meta">
+                  <span>${escapeHTML(member.relationshipToPrimary || "Family member")}</span>
+                  <span>${data.settings.showBirthYears === "false" ? "" : escapeHTML(lifespan(member))}</span>
+                  <span>${member.status === "deceased" ? "Deceased" : "Living"}</span>
+                </div>
+              </div>
+              ${hasChildren ? `<button class="collapse-toggle" data-collapse-id="${member.id}" aria-label="Collapse or expand branch">${collapsed.has(member.id) ? "+" : "−"}</button>` : ""}
+            </article>
+          `);
+        }
+        $$(".person-card").forEach(card => {
+          card.addEventListener("click", event => {
+            if (event.target.closest(".collapse-toggle")) return;
+            openProfile(card.dataset.memberId);
+          });
+          card.addEventListener("keydown", event => {
+            if (event.key === "Enter" || event.key === " ") openProfile(card.dataset.memberId);
+          });
+        });
+        $$(".collapse-toggle").forEach(btn => btn.addEventListener("click", event => {
+          event.stopPropagation();
+          const memberId = btn.dataset.collapseId;
+          collapsed.has(memberId) ? collapsed.delete(memberId) : collapsed.add(memberId);
+          renderTree();
+        }));
+        applyTreeTransform();
+      }
+
+      function computeLayout() {
+        const visibleMembers = data.members.filter(member => !member.archived);
+        const childrenByParent = new Map();
+        const parentsByChild = new Map();
+        for (const rel of data.relationships.filter(r => r.kind === "parentChild")) {
+          if (!childrenByParent.has(rel.from)) childrenByParent.set(rel.from, []);
+          if (!parentsByChild.has(rel.to)) parentsByChild.set(rel.to, []);
+          childrenByParent.get(rel.from).push(rel.to);
+          parentsByChild.get(rel.to).push(rel.from);
+        }
+        const hidden = new Set();
+        function hideDescendants(memberId) {
+          for (const childId of childrenByParent.get(memberId) || []) {
+            hidden.add(childId);
+            hideDescendants(childId);
+          }
+        }
+        collapsed.forEach(hideDescendants);
+        const members = visibleMembers.filter(member => !hidden.has(member.id));
+        const level = new Map();
+        const roots = members.filter(member => !(parentsByChild.get(member.id) || []).some(pid => memberById(pid) && !hidden.has(pid)));
+        if (!roots.length && members[0]) roots.push(members[0]);
+        roots.forEach(root => level.set(root.id, 0));
+        let changed = true;
+        while (changed) {
+          changed = false;
+          for (const rel of data.relationships.filter(r => r.kind === "parentChild")) {
+            if (hidden.has(rel.from) || hidden.has(rel.to)) continue;
+            if (level.has(rel.from)) {
+              const next = level.get(rel.from) + 1;
+              if (!level.has(rel.to) || level.get(rel.to) < next) {
+                level.set(rel.to, next);
+                changed = true;
+              }
+            }
+          }
+        }
+        members.forEach(member => { if (!level.has(member.id)) level.set(member.id, 0); });
+        for (const rel of data.relationships.filter(r => ["partner", "formerPartner"].includes(r.kind))) {
+          if (level.has(rel.from) && !level.has(rel.to)) level.set(rel.to, level.get(rel.from));
+          if (level.has(rel.to) && !level.has(rel.from)) level.set(rel.from, level.get(rel.to));
+        }
+        const groups = new Map();
+        members.forEach(member => {
+          const lvl = level.get(member.id) || 0;
+          if (!groups.has(lvl)) groups.set(lvl, []);
+          groups.get(lvl).push(member);
+        });
+        const positions = new Map();
+        [...groups.keys()].sort((a, b) => a - b).forEach(lvl => {
+          groups.get(lvl).sort((a, b) => fullName(a).localeCompare(fullName(b))).forEach((member, index) => {
+            positions.set(member.id, { x: 120 + index * 250, y: 100 + lvl * 210 });
+          });
+        });
+        return { members, positions };
+      }
+
+      function fitTree() {
+        const layout = computeLayout();
+        if (!layout.positions.size) return;
+        const xs = [...layout.positions.values()].map(p => p.x);
+        const ys = [...layout.positions.values()].map(p => p.y);
+        const minX = Math.min(...xs), minY = Math.min(...ys);
+        const maxX = Math.max(...xs) + 220, maxY = Math.max(...ys) + 140;
+        const canvas = $("#treeCanvas").getBoundingClientRect();
+        const scale = Math.min(1.25, Math.max(.35, Math.min(canvas.width / (maxX - minX + 120), canvas.height / (maxY - minY + 120))));
+        treeState.scale = scale;
+        treeState.x = 60 - minX * scale;
+        treeState.y = 60 - minY * scale;
+        applyTreeTransform();
+      }
+
+      function applyTreeTransform() {
+        $("#treeStage").style.transform = `translate(${treeState.x}px, ${treeState.y}px) scale(${treeState.scale})`;
+      }
+
+      function renderMembers() {
+        const container = $("#memberList");
+        const name = $("#filterName").value.toLowerCase();
+        const loc = $("#filterLocation").value.toLowerCase();
+        const tag = $("#filterTag").value.toLowerCase();
+        const status = $("#filterStatus").value;
+        const month = $("#filterMonth").value;
+        let members = data.members.filter(member => {
+          const hay = `${fullName(member)} ${member.preferredName || ""} ${member.maidenName || ""}`.toLowerCase();
+          const tags = normalizeTags(member.tags).join(" ").toLowerCase();
+          const birthMonth = member.birthDate ? String(dateValue(member.birthDate)?.getMonth() + 1) : "";
+          return (!name || hay.includes(name))
+            && (!loc || locationText(member).toLowerCase().includes(loc))
+            && (!tag || tags.includes(tag))
+            && (!status || member.status === status)
+            && (!month || birthMonth === month);
+        });
+        const sort = $("#sortMembers").value;
+        members.sort((a, b) => {
+          if (sort === "firstName") return (a.firstName || "").localeCompare(b.firstName || "");
+          if (sort === "age") return (age(b) || -1) - (age(a) || -1);
+          if (sort === "birthDate") return (a.birthDate || "").localeCompare(b.birthDate || "");
+          if (sort === "dateAdded") return (b.createdAt || "").localeCompare(a.createdAt || "");
+          if (sort === "relationship") return (a.relationshipToPrimary || "").localeCompare(b.relationshipToPrimary || "");
+          return (a.lastName || "").localeCompare(b.lastName || "") || (a.firstName || "").localeCompare(b.firstName || "");
+        });
+        if (!members.length) {
+          container.innerHTML = `<div class="empty">No family members match the current filters.</div>`;
+          return;
+        }
+        container.innerHTML = members.map(member => `
+          <article class="member-row">
+            ${avatar(member)}
+            <div>
+              <strong>${escapeHTML(displayName(member))}</strong>
+              <div class="muted">${escapeHTML(member.relationshipToPrimary || "Family member")} · ${escapeHTML(lifespan(member))}</div>
+              <div class="muted">${escapeHTML(locationText(member))}</div>
+              <div class="tags">${normalizeTags(member.tags).map(t => `<span class="tag">${escapeHTML(t)}</span>`).join("")}</div>
+            </div>
+            <div class="actions-row"><span class="status-pill">${member.status === "deceased" ? "Deceased" : "Living"}</span><button data-open-member="${member.id}">Open</button></div>
+          </article>
+        `).join("");
+        $$("[data-open-member]").forEach(btn => btn.addEventListener("click", () => openProfile(btn.dataset.openMember)));
+      }
+
+      function nextOccurrence(date) {
+        const d = dateValue(date);
+        if (!d) return null;
+        const now = new Date();
+        let next = new Date(now.getFullYear(), d.getMonth(), d.getDate());
+        if (next < new Date(now.getFullYear(), now.getMonth(), now.getDate())) next.setFullYear(now.getFullYear() + 1);
+        const days = Math.ceil((next - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 86400000);
+        return { next, days };
+      }
+
+      function renderEvents() {
+        const events = [];
+        data.members.forEach(member => {
+          if (member.birthDate) {
+            const occ = nextOccurrence(member.birthDate);
+            events.push({ title: `${displayName(member)} birthday`, date: member.birthDate, type: "Birthday", member, days: occ.days, displayDate: occ.next, age: occ.next.getFullYear() - dateValue(member.birthDate).getFullYear() });
+          }
+          if (member.anniversary) {
+            const occ = nextOccurrence(member.anniversary);
+            events.push({ title: `${displayName(member)} anniversary`, date: member.anniversary, type: "Anniversary", member, days: occ.days, displayDate: occ.next });
+          }
+          if (member.deathDate) {
+            const occ = nextOccurrence(member.deathDate);
+            events.push({ title: `${displayName(member)} memorial date`, date: member.deathDate, type: "Memorial", member, days: occ.days, displayDate: occ.next });
+          }
+        });
+        data.customEvents.forEach(event => {
+          const occ = nextOccurrence(event.date);
+          if (occ) events.push({ ...event, type: event.type || "Custom", days: occ.days, displayDate: occ.next });
+        });
+        events.sort((a, b) => a.days - b.days);
+        $("#eventsList").innerHTML = events.length ? events.map(event => `
+          <article class="card">
+            <div style="display:flex;gap:.75rem;align-items:center">${event.member ? avatar(event.member) : `<div class="avatar">★</div>`}<div><h2 style="margin:.1rem 0">${escapeHTML(event.title)}</h2><div class="muted">${escapeHTML(event.type)} · ${event.days === 0 ? "Today" : `${event.days} days remaining`}</div></div></div>
+            <p>${event.displayDate.toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" })}${event.age ? ` · turns ${event.age}` : ""}</p>
+            ${event.notes ? `<p>${escapeHTML(event.notes)}</p>` : ""}
+            ${event.id ? `<button data-edit-event="${event.id}">Edit</button>` : ""}
+          </article>
+        `).join("") : `<div class="empty">Add birthdays, anniversaries, or custom family events to see upcoming dates.</div>`;
+        $$("[data-edit-event]").forEach(btn => btn.addEventListener("click", () => openEvent(btn.dataset.editEvent)));
+      }
+
+      function renderNotes() {
+        const search = $("#noteSearch").value.toLowerCase();
+        const category = $("#noteCategoryFilter").value;
+        const notes = data.familyNotes.filter(note => {
+          const hay = `${note.title} ${note.body} ${note.tags}`.toLowerCase();
+          return (!search || hay.includes(search)) && (!category || note.category === category);
+        }).sort((a, b) => Number(b.pinned) - Number(a.pinned) || (b.updatedAt || "").localeCompare(a.updatedAt || ""));
+        $("#notesList").innerHTML = notes.length ? notes.map(note => `
+          <article class="card">
+            <div class="section-title"><h2>${note.pinned ? "📌 " : ""}${escapeHTML(note.title)}</h2><button data-edit-note="${note.id}">Edit</button></div>
+            <div class="muted">${escapeHTML(note.category)} · Updated ${new Date(note.updatedAt).toLocaleDateString()}</div>
+            <p style="white-space:pre-wrap">${escapeHTML(note.body)}</p>
+            <div class="tags">${normalizeTags(note.tags).map(t => `<span class="tag">${escapeHTML(t)}</span>`).join("")}</div>
+          </article>
+        `).join("") : `<div class="empty">No family notes yet.</div>`;
+        $$("[data-edit-note]").forEach(btn => btn.addEventListener("click", () => openNote(btn.dataset.editNote)));
+      }
+
+      function renderStats() {
+        const living = data.members.filter(m => m.status !== "deceased").length;
+        const deceased = data.members.filter(m => m.status === "deceased").length;
+        const ages = data.members.map(m => ({ member: m, age: age(m) })).filter(x => x.age !== "");
+        const oldest = ages.filter(x => x.member.status !== "deceased").sort((a, b) => b.age - a.age)[0];
+        const youngest = ages.sort((a, b) => a.age - b.age)[0];
+        const generations = new Set([...computeLayout().positions.keys()].map(memberId => Math.round((computeLayout().positions.get(memberId).y - 100) / 210))).size;
+        $("#statsGrid").innerHTML = [
+          ["Total family members", data.members.length],
+          ["Living family members", living],
+          ["Deceased family members", deceased],
+          ["Number of generations", generations || 0],
+          ["Oldest living member", oldest ? `${displayName(oldest.member)} (${oldest.age})` : "Unknown"],
+          ["Youngest member", youngest ? `${displayName(youngest.member)} (${youngest.age})` : "Unknown"],
+          ["Upcoming birthdays", data.members.filter(m => m.birthDate).length],
+          ["Family notes", data.familyNotes.length]
+        ].map(([label, value]) => `<div class="card"><div class="muted">${escapeHTML(label)}</div><h2>${escapeHTML(value)}</h2></div>`).join("");
+        renderChart("#nameChart", countBy(data.members, m => m.lastName || "Unknown"));
+        renderChart("#locationChart", countBy(data.members, m => locationText(m) || "Unknown"));
+      }
+
+      function countBy(items, getter) {
+        const counts = {};
+        items.forEach(item => { const key = getter(item); counts[key] = (counts[key] || 0) + 1; });
+        return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 8);
+      }
+
+      function renderChart(selector, rows) {
+        const max = Math.max(1, ...rows.map(row => row[1]));
+        $(selector).innerHTML = rows.length ? rows.map(([label, value]) => `
+          <div class="chart-bar"><span>${escapeHTML(label)}</span><div class="bar-track"><div class="bar-fill" style="width:${(value / max) * 100}%"></div></div><strong>${value}</strong></div>
+        `).join("") : `<p class="muted">Not enough data yet.</p>`;
+      }
+
+      function renderSettings() {
+        const form = $("#settingsForm");
+        Object.entries(data.settings).forEach(([key, value]) => {
+          if (form.elements[key]) form.elements[key].value = String(value);
+        });
+        const select = form.elements.primaryPerson;
+        select.innerHTML = `<option value="">None selected</option>` + data.members.map(member => `<option value="${member.id}">${escapeHTML(fullName(member))}</option>`).join("");
+        select.value = data.settings.primaryPerson || "";
+      }
+
+      function openMember(memberId = "") {
+        const form = $("#memberForm");
+        form.reset();
+        form.elements.id.value = memberId;
+        form.elements.photo.value = "";
+        const member = memberId ? memberById(memberId) : null;
+        $("#memberDialogTitle").textContent = member ? "Edit Family Member" : "Add Family Member";
+        $("#deleteMemberBtn").disabled = !member;
+        $("#duplicateMemberBtn").disabled = !member;
+        $("#archiveMemberBtn").disabled = !member;
+        if (member) {
+          Object.entries(member).forEach(([key, value]) => {
+            if (form.elements[key]) form.elements[key].value = Array.isArray(value) ? value.join(", ") : value ?? "";
+          });
+          $("#archiveMemberBtn").textContent = member.archived ? "Unarchive" : "Archive";
+        } else {
+          form.elements.status.value = "living";
+        }
+        renderPhotoPreview(form.elements.photo.value, form.elements.firstName.value, form.elements.lastName.value);
+        $("#memberDialog").showModal();
+      }
+
+      function saveMember() {
+        const form = $("#memberForm");
+        if (!form.reportValidity()) return;
+        const values = Object.fromEntries(new FormData(form).entries());
+        const now = new Date().toISOString();
+        const member = {
+          ...values,
+          tags: normalizeTags(values.tags),
+          updatedAt: now,
+          archived: memberById(values.id)?.archived || false
+        };
+        if (values.id) {
+          const index = data.members.findIndex(m => m.id === values.id);
+          member.createdAt = data.members[index].createdAt || now;
+          data.members[index] = { ...data.members[index], ...member };
+        } else {
+          member.id = id("person");
+          member.createdAt = now;
+          data.members.push(member);
+          if (!data.settings.primaryPerson) data.settings.primaryPerson = member.id;
+        }
+        save();
+        $("#memberDialog").close();
+        render();
+      }
+
+      function openProfile(memberId) {
+        const member = memberById(memberId);
+        if (!member) return;
+        activeProfileId = memberId;
+        const rels = relationsFor(memberId);
+        const relationshipRows = rels.map(rel => {
+          const other = memberById(rel.from === memberId ? rel.to : rel.from);
+          return other ? `<li>${escapeHTML(displayName(other))}: ${escapeHTML(relationLabel(rel))} <button data-unlink="${rel.id}">Unlink</button></li>` : "";
+        }).join("");
+        $("#profileTitle").textContent = displayName(member);
+        $("#profileBody").innerHTML = `
+          <div class="profile-layout">
+            <div class="card">${avatar(member, "profile-photo")}<h2>${escapeHTML(displayName(member))}</h2><p class="muted">${escapeHTML(member.relationshipToPrimary || "Family member")} · ${escapeHTML(lifespan(member))}</p><p>${member.status === "deceased" ? "Deceased" : "Living"}</p></div>
+            <div class="grid">
+              <div class="card"><h3>Quick Actions</h3><div class="actions-row">
+                <button data-relation="parent">Add parent</button><button data-relation="child">Add child</button><button data-relation="sibling">Add sibling</button><button data-relation="partner">Add partner</button><button data-relation="formerPartner">Add former partner</button><button data-relation="guardian">Add guardian</button>
+              </div></div>
+              <div class="card"><h3>Contact and Personal</h3><p>${escapeHTML([member.email, member.phone, locationText(member)].filter(Boolean).join(" · "))}</p><p>${escapeHTML([member.occupation, member.employer, member.education].filter(Boolean).join(" · "))}</p><p>${escapeHTML([member.languages, member.hobbies, member.interests].filter(Boolean).join(" · "))}</p></div>
+              <div class="card"><h3>Relationships</h3><ul>${relationshipRows || "<li>No linked relationships yet.</li>"}</ul></div>
+              <div class="card"><h3>Notes and Memories</h3><p style="white-space:pre-wrap">${escapeHTML([member.generalNotes, member.biography, member.familyStories, member.memories, member.traditions, member.recipes, member.medicalNotes, member.privateNotes].filter(Boolean).join("\\n\\n")) || "No notes yet."}</p></div>
+            </div>
+          </div>
+        `;
+        $$("[data-relation]", $("#profileBody")).forEach(btn => btn.addEventListener("click", () => openRelation(memberId, btn.dataset.relation)));
+        $$("[data-unlink]", $("#profileBody")).forEach(btn => btn.addEventListener("click", () => unlinkRelationship(btn.dataset.unlink)));
+        $("#profileDialog").showModal();
+      }
+
+      function openRelation(baseId, kind) {
+        const form = $("#relationForm");
+        form.reset();
+        form.elements.baseId.value = baseId;
+        form.elements.kind.value = kind;
+        if (kind === "partner") form.elements.type.value = "partner";
+        if (kind === "formerPartner") form.elements.type.value = "formerPartner";
+        if (kind === "guardian") form.elements.type.value = "guardian";
+        form.elements.existingId.innerHTML = data.members.filter(m => m.id !== baseId).map(m => `<option value="${m.id}">${escapeHTML(fullName(m))}</option>`).join("");
+        syncRelationMode();
+        $("#relationDialog").showModal();
+      }
+
+      function syncRelationMode() {
+        const mode = $("#relationForm").elements.mode.value;
+        $$(".existing-field").forEach(el => el.style.display = mode === "existing" ? "" : "none");
+        $$(".new-field").forEach(el => el.style.display = mode === "new" ? "" : "none");
+      }
+
+      function saveRelationshipFromForm() {
+        const form = $("#relationForm");
+        const values = Object.fromEntries(new FormData(form).entries());
+        let otherId = values.existingId;
+        if (values.mode === "new") {
+          if (!values.firstName.trim()) {
+            alert("Enter a first name for the new family member.");
+            return;
+          }
+          otherId = id("person");
+          data.members.push({
+            id: otherId,
+            firstName: values.firstName.trim(),
+            lastName: values.lastName.trim(),
+            birthDate: values.birthDate,
+            status: "living",
+            tags: [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
+        }
+        const warning = relationshipWarning(values.baseId, otherId, values.kind, values.type);
+        if (warning.block) {
+          alert(warning.message);
+          return;
+        }
+        if (warning.message && !confirm(warning.message + "\n\nContinue anyway?")) return;
+        addRelationship(values.baseId, otherId, values.kind, values.type, values);
+        save();
+        $("#relationDialog").close();
+        $("#profileDialog").close();
+        render();
+        openProfile(values.baseId);
+      }
+
+      function addRelationship(baseId, otherId, kind, type, meta = {}) {
+        if (baseId === otherId) return;
+        let from = baseId, to = otherId, relKind = kind;
+        if (kind === "parent") { from = otherId; to = baseId; relKind = "parentChild"; }
+        if (kind === "child") { from = baseId; to = otherId; relKind = "parentChild"; }
+        if (kind === "guardian") { from = otherId; to = baseId; relKind = "parentChild"; type = "guardian"; }
+        if (kind === "sibling") relKind = "sibling";
+        if (kind === "partner" || kind === "formerPartner") relKind = kind;
+        const duplicate = data.relationships.some(rel => rel.from === from && rel.to === to && rel.kind === relKind && rel.type === type);
+        if (duplicate) return;
+        data.relationships.push({
+          id: id("rel"),
+          from, to, kind: relKind, type,
+          status: kind === "formerPartner" || type?.startsWith("former") ? "former" : "current",
+          startDate: meta.startDate || "",
+          endDate: meta.endDate || "",
+          marriageDate: meta.marriageDate || "",
+          divorceDate: meta.divorceDate || "",
+          createdAt: new Date().toISOString()
+        });
+      }
+
+      function relationshipWarning(baseId, otherId, kind) {
+        if (baseId === otherId) return { block: true, message: "A person cannot be related to themselves in that way." };
+        if ((kind === "parent" || kind === "child" || kind === "guardian") && createsAncestryCycle(baseId, otherId, kind)) {
+          return { block: true, message: "This would create a circular parent-child ancestry relationship." };
+        }
+        const base = memberById(baseId);
+        const other = memberById(otherId);
+        if (kind === "parent" && base?.birthDate && other?.birthDate && dateValue(other.birthDate) > dateValue(base.birthDate)) {
+          return { block: false, message: "The parent appears younger than the child based on recorded birth dates." };
+        }
+        if (kind === "child" && base?.birthDate && other?.birthDate && dateValue(other.birthDate) < dateValue(base.birthDate)) {
+          return { block: false, message: "The child appears older than the parent based on recorded birth dates." };
+        }
+        return { block: false, message: "" };
+      }
+
+      function createsAncestryCycle(baseId, otherId, kind) {
+        const proposedParent = kind === "child" ? baseId : otherId;
+        const proposedChild = kind === "child" ? otherId : baseId;
+        const childrenByParent = new Map();
+        data.relationships.filter(r => r.kind === "parentChild").forEach(rel => {
+          if (!childrenByParent.has(rel.from)) childrenByParent.set(rel.from, []);
+          childrenByParent.get(rel.from).push(rel.to);
+        });
+        if (!childrenByParent.has(proposedParent)) childrenByParent.set(proposedParent, []);
+        childrenByParent.get(proposedParent).push(proposedChild);
+        const seen = new Set();
+        function walk(idToCheck) {
+          if (idToCheck === proposedParent && seen.size) return true;
+          if (seen.has(idToCheck)) return false;
+          seen.add(idToCheck);
+          return (childrenByParent.get(idToCheck) || []).some(walk);
+        }
+        return walk(proposedChild);
+      }
+
+      function unlinkRelationship(relId) {
+        const rel = data.relationships.find(r => r.id === relId);
+        if (!rel) return;
+        if (!confirm("Unlink this relationship? No family members will be deleted.")) return;
+        data.relationships = data.relationships.filter(r => r.id !== relId);
+        save();
+        $("#profileDialog").close();
+        render();
+        openProfile(activeProfileId);
+      }
+
+      function deleteMember(memberId) {
+        const member = memberById(memberId);
+        if (!member) return;
+        const affected = relationsFor(memberId).length;
+        const message = `Delete ${fullName(member)}? This will remove ${affected} relationship link(s), but relatives will not be deleted.`;
+        if (data.settings.confirmDelete !== "false" && !confirm(message)) return;
+        data.members = data.members.filter(m => m.id !== memberId);
+        data.relationships = data.relationships.filter(r => r.from !== memberId && r.to !== memberId);
+        if (data.settings.primaryPerson === memberId) data.settings.primaryPerson = "";
+        save();
+        $("#memberDialog").close();
+        $("#profileDialog").close();
+        render();
+      }
+
+      function openNote(noteId = "") {
+        const form = $("#noteForm");
+        form.reset();
+        form.elements.category.innerHTML = categories.map(c => `<option>${escapeHTML(c)}</option>`).join("");
+        const note = data.familyNotes.find(n => n.id === noteId);
+        $("#deleteNoteBtn").disabled = !note;
+        if (note) Object.entries(note).forEach(([key, value]) => { if (form.elements[key]) form.elements[key].value = Array.isArray(value) ? value.join(", ") : String(value); });
+        else form.elements.category.value = "General";
+        $("#noteDialog").showModal();
+      }
+
+      function saveNote() {
+        const form = $("#noteForm");
+        if (!form.reportValidity()) return;
+        const values = Object.fromEntries(new FormData(form).entries());
+        const now = new Date().toISOString();
+        const note = { ...values, pinned: values.pinned === "true", tags: normalizeTags(values.tags), updatedAt: now };
+        if (values.id) {
+          const index = data.familyNotes.findIndex(n => n.id === values.id);
+          data.familyNotes[index] = { ...data.familyNotes[index], ...note };
+        } else {
+          note.id = id("note");
+          note.createdAt = now;
+          data.familyNotes.push(note);
+        }
+        save();
+        $("#noteDialog").close();
+        render();
+      }
+
+      function openEvent(eventId = "") {
+        const form = $("#eventForm");
+        form.reset();
+        const event = data.customEvents.find(e => e.id === eventId);
+        $("#deleteEventBtn").disabled = !event;
+        if (event) Object.entries(event).forEach(([key, value]) => { if (form.elements[key]) form.elements[key].value = value; });
+        $("#eventDialog").showModal();
+      }
+
+      function saveEvent() {
+        const form = $("#eventForm");
+        if (!form.reportValidity()) return;
+        const values = Object.fromEntries(new FormData(form).entries());
+        if (values.id) {
+          const index = data.customEvents.findIndex(e => e.id === values.id);
+          data.customEvents[index] = values;
+        } else {
+          values.id = id("event");
+          data.customEvents.push(values);
+        }
+        save();
+        $("#eventDialog").close();
+        render();
+      }
+
+      function exportData() {
+        const clone = JSON.parse(JSON.stringify(data));
+        if (clone.settings.exportPrivateNotes === "false") clone.members.forEach(member => member.privateNotes = "");
+        const blob = new Blob([JSON.stringify(clone, null, 2)], { type: "application/json" });
+        const date = new Date().toISOString().slice(0, 10);
+        const safeName = (clone.settings.treeName || "family-tree").replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase();
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `${safeName}-${date}.json`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      }
+
+      function validateImport(candidate) {
+        const imported = migrate(candidate);
+        if (!Array.isArray(imported.members) || !Array.isArray(imported.relationships)) throw new Error("The file is missing family members or relationships arrays.");
+        imported.members.forEach(member => { if (!member.id) throw new Error("A family member is missing a stable ID."); });
+        return imported;
+      }
+
+      function finishImport() {
+        if (!pendingImport) return;
+        localStorage.setItem(BACKUP_KEY, JSON.stringify(data));
+        data = pendingImport;
+        pendingImport = null;
+        save();
+        $("#importDialog").close();
+        render();
+      }
+
+      function createBackup() {
+        localStorage.setItem(BACKUP_KEY, JSON.stringify(data));
+        showSaved();
+        alert("Backup created in this browser.");
+      }
+
+      function restoreBackup() {
+        const raw = localStorage.getItem(BACKUP_KEY);
+        if (!raw) return alert("No browser backup was found.");
+        if (!confirm("Restore the last browser backup and replace current data?")) return;
+        data = migrate(JSON.parse(raw));
+        save();
+        render();
+      }
+
+      function clearAllData() {
+        const phrase = prompt('Type "CLEAR FAMILY DATA" to remove all family members, relationships, notes, events, and settings from this browser.');
+        if (phrase !== "CLEAR FAMILY DATA") return;
+        localStorage.setItem(BACKUP_KEY, JSON.stringify(data));
+        data = blankData();
+        data.settings.firstRunComplete = true;
+        save();
+        render();
+      }
+
+      function globalSearch(term) {
+        term = term.toLowerCase().trim();
+        const results = [];
+        if (!term) return results;
+        data.members.forEach(member => {
+          const hay = Object.entries(member).filter(([key]) => key !== "photo").map(([, value]) => Array.isArray(value) ? value.join(" ") : value).join(" ").toLowerCase();
+          if (hay.includes(term)) results.push({ type: "member", id: member.id, title: displayName(member), detail: [member.relationshipToPrimary, locationText(member)].filter(Boolean).join(" · ") });
+        });
+        data.familyNotes.forEach(note => {
+          const hay = `${note.title} ${note.body} ${note.category} ${normalizeTags(note.tags).join(" ")}`.toLowerCase();
+          if (hay.includes(term)) results.push({ type: "note", id: note.id, title: note.title, detail: `Note · ${note.category}` });
+        });
+        return results.slice(0, 12);
+      }
+
+      function renderSearch() {
+        const results = globalSearch($("#globalSearch").value);
+        const box = $("#searchResults");
+        box.classList.toggle("open", $("#globalSearch").value.trim().length > 0);
+        box.innerHTML = results.length ? results.map(result => `<div class="search-result" role="option" tabindex="0" data-result-type="${result.type}" data-result-id="${result.id}"><strong>${escapeHTML(result.title)}</strong><div class="muted">${escapeHTML(result.detail)}</div></div>`).join("") : `<div class="search-result">No results found.</div>`;
+        $$("[data-result-id]", box).forEach(el => el.addEventListener("click", () => {
+          box.classList.remove("open");
+          if (el.dataset.resultType === "member") openProfile(el.dataset.resultId);
+          if (el.dataset.resultType === "note") { setView("notes"); openNote(el.dataset.resultId); }
+        }));
+      }
+
+      async function processPhoto(file) {
+        if (!file) return "";
+        if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+          alert("Please choose a PNG, JPG, JPEG, or WebP image.");
+          return "";
+        }
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; img.src = url; });
+        const size = Math.min(img.width, img.height);
+        const sx = (img.width - size) / 2;
+        const sy = (img.height - size) / 2;
+        const canvas = document.createElement("canvas");
+        canvas.width = 420;
+        canvas.height = 420;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, sx, sy, size, size, 0, 0, 420, 420);
+        URL.revokeObjectURL(url);
+        return canvas.toDataURL("image/jpeg", .78);
+      }
+
+      function renderPhotoPreview(photo, firstName = "", lastName = "") {
+        const preview = $("#photoPreview");
+        preview.innerHTML = photo ? `<img alt="" src="${photo}">` : escapeHTML(([firstName[0], lastName[0]].filter(Boolean).join("") || "?").toUpperCase());
+      }
+
+      function checkStorage() {
+        const warning = $("#storageWarning");
+        try {
+          const bytes = new Blob([JSON.stringify(data)]).size;
+          const mb = bytes / 1024 / 1024;
+          warning.style.display = mb > 4 ? "" : "none";
+          warning.textContent = `Storage warning: this tree is using about ${mb.toFixed(1)} MB in browser storage. Export a backup and remove oversized photos if saving becomes unreliable.`;
+        } catch {
+          warning.style.display = "none";
+        }
+      }
+
+      function loadDemo() {
+        const now = new Date().toISOString();
+        const people = [
+          { id: "demo_elena", firstName: "Elena", lastName: "Rivera", relationshipToPrimary: "Grandmother", birthDate: "1948-04-12", city: "Santa Fe", country: "USA", status: "living", tags: ["maternal"], generalNotes: "Keeps the family recipe notebook.", createdAt: now, updatedAt: now },
+          { id: "demo_marcus", firstName: "Marcus", lastName: "Rivera", relationshipToPrimary: "Grandfather", birthDate: "1946-11-03", deathDate: "2020-02-08", city: "Santa Fe", country: "USA", status: "deceased", tags: ["maternal"], generalNotes: "Loved woodworking and family reunions.", createdAt: now, updatedAt: now },
+          { id: "demo_ana", firstName: "Ana", lastName: "Rivera", relationshipToPrimary: "Mother", birthDate: "1975-08-21", currentLocation: "Winnipeg, MB", status: "living", tags: ["maternal"], createdAt: now, updatedAt: now },
+          { id: "demo_jon", firstName: "Jon", lastName: "Parker", relationshipToPrimary: "Father", birthDate: "1974-02-15", currentLocation: "Winnipeg, MB", status: "living", tags: ["paternal"], createdAt: now, updatedAt: now },
+          { id: "demo_mia", firstName: "Mia", lastName: "Parker", relationshipToPrimary: "Primary person", birthDate: "2006-06-09", currentLocation: "Winnipeg, MB", status: "living", tags: ["household"], familyStories: "Started the digital family archive.", createdAt: now, updatedAt: now },
+          { id: "demo_luca", firstName: "Luca", lastName: "Parker", relationshipToPrimary: "Brother", birthDate: "2010-12-01", currentLocation: "Winnipeg, MB", status: "living", tags: ["household"], createdAt: now, updatedAt: now }
+        ];
+        data = blankData();
+        data.settings.firstRunComplete = true;
+        data.settings.primaryPerson = "demo_mia";
+        data.members = people;
+        addRelationship("demo_elena", "demo_ana", "child", "biological");
+        addRelationship("demo_marcus", "demo_ana", "child", "biological");
+        addRelationship("demo_ana", "demo_jon", "partner", "spouse", { marriageDate: "2001-07-14" });
+        addRelationship("demo_ana", "demo_mia", "child", "biological");
+        addRelationship("demo_jon", "demo_mia", "child", "biological");
+        addRelationship("demo_ana", "demo_luca", "child", "biological");
+        addRelationship("demo_jon", "demo_luca", "child", "biological");
+        data.familyNotes.push({ id: "demo_note", title: "Sunday Dinner Tradition", category: "Traditions", tags: ["food", "gatherings"], pinned: true, body: "The family gathers on the first Sunday of each month. Everyone brings one dish and one story.", createdAt: now, updatedAt: now });
+        save();
+        $("#welcome").classList.remove("open");
+        render();
+        setTimeout(fitTree, 100);
+      }
+
+      function initOptions() {
+        $("#filterMonth").innerHTML = `<option value="">Birth month</option>` + months.map((month, i) => `<option value="${i + 1}">${month}</option>`).join("");
+        $("#noteCategoryFilter").innerHTML = `<option value="">All categories</option>` + categories.map(c => `<option>${escapeHTML(c)}</option>`).join("");
+      }
+
+      function bindEvents() {
+        $("#menuBtn").addEventListener("click", () => $("#sidebar").classList.toggle("open"));
+        $$(".nav-btn").forEach(btn => btn.addEventListener("click", () => setView(btn.dataset.view)));
+        $("#addMemberBtn").addEventListener("click", () => openMember());
+        $("#addMemberBtn2").addEventListener("click", () => openMember());
+        $("#settingsBtn").addEventListener("click", () => setView("settings"));
+        $("#fitBtn").addEventListener("click", fitTree);
+        $("#zoomInBtn").addEventListener("click", () => { treeState.scale = Math.min(2.4, treeState.scale + .12); applyTreeTransform(); });
+        $("#zoomOutBtn").addEventListener("click", () => { treeState.scale = Math.max(.25, treeState.scale - .12); applyTreeTransform(); });
+        $("#printTreeBtn").addEventListener("click", () => window.print());
+        $("#printDirectoryBtn").addEventListener("click", () => { setView("members"); setTimeout(() => window.print(), 100); });
+        $("#exportBtn").addEventListener("click", exportData);
+        $("#importBtn").addEventListener("click", () => $("#importDialog").showModal());
+        $("#backupBtn").addEventListener("click", createBackup);
+        $("#restoreBackupBtn").addEventListener("click", restoreBackup);
+        $("#clearDataBtn").addEventListener("click", clearAllData);
+        $("#addNoteBtn").addEventListener("click", () => openNote());
+        $("#addEventBtn").addEventListener("click", () => openEvent());
+        $("#editProfileBtn").addEventListener("click", () => { $("#profileDialog").close(); openMember(activeProfileId); });
+        $("#profilePrintBtn").addEventListener("click", () => window.print());
+        $("#startNewBtn").addEventListener("click", () => { data.settings.firstRunComplete = true; save(); $("#welcome").classList.remove("open"); render(); });
+        $("#loadDemoBtn").addEventListener("click", loadDemo);
+        $("#welcomeImportBtn").addEventListener("click", () => { $("#welcome").classList.remove("open"); $("#importDialog").showModal(); });
+        $$("[data-close]").forEach(btn => btn.addEventListener("click", () => $(`#${btn.dataset.close}`).close()));
+        $$(".tab").forEach(btn => btn.addEventListener("click", () => {
+          $$(".tab").forEach(t => t.classList.toggle("active", t === btn));
+          $$(".tab-panel").forEach(panel => panel.classList.toggle("active", panel.dataset.panel === btn.dataset.tab));
+        }));
+        $("#memberForm").addEventListener("submit", event => { event.preventDefault(); saveMember(); });
+        $("#relationForm").addEventListener("submit", event => { event.preventDefault(); saveRelationshipFromForm(); });
+        $("#noteForm").addEventListener("submit", event => { event.preventDefault(); saveNote(); });
+        $("#eventForm").addEventListener("submit", event => { event.preventDefault(); saveEvent(); });
+        $("#relationForm").elements.mode.addEventListener("change", syncRelationMode);
+        $("#deleteMemberBtn").addEventListener("click", () => deleteMember($("#memberForm").elements.id.value));
+        $("#archiveMemberBtn").addEventListener("click", () => {
+          const member = memberById($("#memberForm").elements.id.value);
+          if (!member) return;
+          member.archived = !member.archived;
+          member.updatedAt = new Date().toISOString();
+          save();
+          $("#memberDialog").close();
+          render();
+        });
+        $("#duplicateMemberBtn").addEventListener("click", () => {
+          const original = memberById($("#memberForm").elements.id.value);
+          if (!original) return;
+          const copy = { ...original, id: id("person"), firstName: `${original.firstName || "Copy"} Copy`, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+          data.members.push(copy);
+          save();
+          $("#memberDialog").close();
+          render();
+          openMember(copy.id);
+        });
+        $("#deleteNoteBtn").addEventListener("click", () => {
+          const noteId = $("#noteForm").elements.id.value;
+          if (!noteId || !confirm("Delete this family note?")) return;
+          data.familyNotes = data.familyNotes.filter(n => n.id !== noteId);
+          save();
+          $("#noteDialog").close();
+          render();
+        });
+        $("#deleteEventBtn").addEventListener("click", () => {
+          const eventId = $("#eventForm").elements.id.value;
+          if (!eventId || !confirm("Delete this custom event?")) return;
+          data.customEvents = data.customEvents.filter(e => e.id !== eventId);
+          save();
+          $("#eventDialog").close();
+          render();
+        });
+        $("#photoInput").addEventListener("change", async event => {
+          const photo = await processPhoto(event.target.files[0]);
+          if (photo) {
+            $("#memberForm").elements.photo.value = photo;
+            renderPhotoPreview(photo);
+          }
+        });
+        $("#removePhotoBtn").addEventListener("click", () => {
+          $("#memberForm").elements.photo.value = "";
+          $("#photoInput").value = "";
+          renderPhotoPreview("", $("#memberForm").elements.firstName.value, $("#memberForm").elements.lastName.value);
+        });
+        ["firstName", "lastName"].forEach(name => $("#memberForm").elements[name].addEventListener("input", () => {
+          if (!$("#memberForm").elements.photo.value) renderPhotoPreview("", $("#memberForm").elements.firstName.value, $("#memberForm").elements.lastName.value);
+        }));
+        $("#settingsForm").addEventListener("input", event => {
+          if (!event.target.name) return;
+          data.settings[event.target.name] = event.target.value;
+          save();
+          render();
+        });
+        ["filterName", "filterLocation", "filterTag", "filterStatus", "filterMonth", "sortMembers", "noteSearch", "noteCategoryFilter"].forEach(inputId => {
+          $(`#${inputId}`).addEventListener("input", render);
+        });
+        $("#globalSearch").addEventListener("input", renderSearch);
+        document.addEventListener("click", event => {
+          if (!event.target.closest(".search-wrap")) $("#searchResults").classList.remove("open");
+        });
+        $("#chooseImportBtn").addEventListener("click", () => $("#importFile").click());
+        $("#importFile").addEventListener("change", async event => {
+          const file = event.target.files[0];
+          if (!file) return;
+          try {
+            const parsed = JSON.parse(await file.text());
+            pendingImport = validateImport(parsed);
+            const images = pendingImport.members.filter(m => m.photo).length;
+            $("#importSummary").innerHTML = `<div class="card"><strong>Valid FamilyOS backup found.</strong><p>${pendingImport.members.length} members, ${pendingImport.relationships.length} relationships, ${pendingImport.familyNotes.length} notes, ${pendingImport.customEvents.length} events, ${images} profile image(s).</p><p>A backup of current data will be created before import.</p></div>`;
+            $("#confirmImportBtn").disabled = false;
+          } catch (err) {
+            pendingImport = null;
+            $("#confirmImportBtn").disabled = true;
+            $("#importSummary").innerHTML = `<div class="warning">${escapeHTML(err.message || "Invalid JSON file.")}</div>`;
+          }
+        });
+        $("#confirmImportBtn").addEventListener("click", finishImport);
+        const canvas = $("#treeCanvas");
+        canvas.addEventListener("pointerdown", event => {
+          treeState.dragging = true;
+          treeState.lastX = event.clientX;
+          treeState.lastY = event.clientY;
+          canvas.setPointerCapture(event.pointerId);
+        });
+        canvas.addEventListener("pointermove", event => {
+          if (!treeState.dragging) return;
+          treeState.x += event.clientX - treeState.lastX;
+          treeState.y += event.clientY - treeState.lastY;
+          treeState.lastX = event.clientX;
+          treeState.lastY = event.clientY;
+          applyTreeTransform();
+        });
+        canvas.addEventListener("pointerup", () => treeState.dragging = false);
+        canvas.addEventListener("wheel", event => {
+          event.preventDefault();
+          const oldScale = treeState.scale;
+          const direction = event.deltaY > 0 ? -.08 : .08;
+          treeState.scale = Math.max(.25, Math.min(2.4, treeState.scale + direction));
+          const rect = canvas.getBoundingClientRect();
+          const cx = event.clientX - rect.left;
+          const cy = event.clientY - rect.top;
+          treeState.x = cx - (cx - treeState.x) * (treeState.scale / oldScale);
+          treeState.y = cy - (cy - treeState.y) * (treeState.scale / oldScale);
+          applyTreeTransform();
+        }, { passive: false });
+      }
+
+      initOptions();
+      bindEvents();
+      render();
+      if (!data.settings.firstRunComplete) $("#welcome").classList.add("open");
+      setTimeout(fitTree, 100);
+    })();
+  </script>
+</body>
+</html>

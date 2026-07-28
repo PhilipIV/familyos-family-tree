@@ -20,6 +20,7 @@
       --focus: #1e6091;
       --shadow: 0 10px 30px rgba(78, 52, 36, .12);
       --workspace-edge: #c8b09d;
+      --generation-band: rgba(182, 95, 58, .045);
       --font-scale: 1;
       --card-w: 190px;
       --card-h: 108px;
@@ -37,6 +38,7 @@
       --danger: #ef7777;
       --shadow: 0 10px 30px rgba(0, 0, 0, .35);
       --workspace-edge: #806b5e;
+      --generation-band: rgba(255, 255, 255, .035);
     }
 
     [data-theme="light"] {
@@ -46,6 +48,7 @@
       --accent: #6e6a45;
       --accent-2: #28666e;
       --workspace-edge: #b8c4c8;
+      --generation-band: rgba(40, 102, 110, .035);
     }
 
     * { box-sizing: border-box; }
@@ -205,6 +208,45 @@
     .tree-heading { display: flex; gap: .7rem; align-items: baseline; min-width: 0; flex-wrap: wrap; }
     .tree-heading h1 { margin: 0; font-size: 1.08rem; line-height: 1.2; }
     .tree-summary { color: var(--muted); font-size: .82rem; font-weight: 700; }
+    .tree-organize {
+      grid-column: 1 / -1;
+      display: flex;
+      gap: .6rem;
+      align-items: center;
+      flex-wrap: wrap;
+      padding-top: .65rem;
+      border-top: 1px solid var(--line);
+    }
+    .control-label { color: var(--muted); font-size: .78rem; font-weight: 800; text-transform: uppercase; }
+    .layout-switch { display: inline-flex; }
+    .layout-switch button {
+      min-height: 34px;
+      border-radius: 0;
+      padding: .4rem .65rem;
+    }
+    .layout-switch button:first-child { border-radius: 6px 0 0 6px; }
+    .layout-switch button:last-child { border-radius: 0 6px 6px 0; margin-left: -1px; }
+    .layout-switch button.active {
+      position: relative;
+      z-index: 1;
+      color: #fff;
+      background: var(--accent-2);
+      border-color: var(--accent-2);
+    }
+    .tree-toggle {
+      display: inline-flex;
+      grid-template-columns: none;
+      gap: .4rem;
+      align-items: center;
+      min-height: 34px;
+      padding: 0 .55rem;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--surface);
+      font-size: .82rem;
+    }
+    .tree-toggle input { width: auto; min-height: 0; margin: 0; }
+    .tree-organize > button { min-height: 34px; padding: .4rem .65rem; }
     .legend {
       grid-column: 1 / -1;
       display: flex;
@@ -239,15 +281,44 @@
       position: absolute;
       inset: 0;
       transform-origin: 0 0;
-      width: 5000px;
-      height: 3000px;
+      min-width: 100%;
+      min-height: 100%;
     }
-    .links { position: absolute; inset: 0; width: 5000px; height: 3000px; pointer-events: none; overflow: visible; }
-    .link { fill: none; stroke: var(--accent-2); stroke-width: 3; }
+    .tree-bands, #treeNodes { position: absolute; inset: 0; }
+    .tree-bands { z-index: 0; pointer-events: none; }
+    #treeNodes { z-index: 2; }
+    .generation-band {
+      position: absolute;
+      left: 0;
+      border-top: 1px solid rgba(112, 100, 92, .18);
+      border-bottom: 1px solid rgba(112, 100, 92, .12);
+      background: var(--generation-band);
+    }
+    .generation-label {
+      position: absolute;
+      left: 24px;
+      top: 12px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+    .links { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+    .link {
+      fill: none;
+      stroke: var(--accent-2);
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      transition: opacity .15s ease, stroke-width .15s ease;
+    }
+    .link.family-trunk, .link.family-bus { stroke-width: 3.5; }
+    .link.family-bus { opacity: .9; }
     .link.adopted { stroke-dasharray: 9 6; }
     .link.step { stroke-dasharray: 2 7; stroke-linecap: round; }
     .link.foster { stroke-dasharray: 12 4 3 4; }
     .link.guardian { stroke-dasharray: 4 4; stroke-width: 4; }
+    .link.mixed { stroke-dasharray: 7 4 2 4; }
     .link.partner { stroke: var(--accent); stroke-width: 4; }
     .link.former { stroke-dasharray: 10 7; opacity: .75; }
     .rel-label {
@@ -257,6 +328,7 @@
       stroke: var(--panel);
       stroke-width: 4px;
       stroke-linejoin: round;
+      transition: opacity .15s ease;
     }
 
     .person-card {
@@ -272,7 +344,13 @@
       grid-template-columns: 52px 1fr;
       gap: .5rem;
       cursor: pointer;
+      transition: opacity .15s ease, box-shadow .15s ease, border-color .15s ease;
     }
+    .person-card.trace-active { border-color: var(--accent-2); box-shadow: 0 8px 22px rgba(47, 125, 109, .24); }
+    .tree-stage.trace-mode .person-card:not(.trace-active),
+    .tree-stage.trace-mode .link:not(.trace-active),
+    .tree-stage.trace-mode .rel-label:not(.trace-active) { opacity: .13; }
+    .tree-stage.trace-mode .link.trace-active { stroke-width: 5; }
     .person-card.deceased { border-style: double; opacity: .82; }
     .person-card.archived { opacity: .5; }
     .avatar {
@@ -436,7 +514,11 @@
     @media (max-width: 560px) {
       .brand span:last-child { display: none; }
       .header-actions button:not(.mobile-keep) { width: 42px; padding: 0; font-size: 0; }
-      .header-actions button:not(.mobile-keep)::first-letter { font-size: 1rem; }
+      .header-actions button:not(.mobile-keep)::before { font-size: 1rem; }
+      #fitBtn::before { content: "⛶"; }
+      #exportBtn::before { content: "⇩"; }
+      #importBtn::before { content: "⇧"; }
+      #settingsBtn::before { content: "⚙"; }
       .member-row { grid-template-columns: 48px 1fr; }
       .member-row .actions-row { grid-column: 1 / -1; }
       :root { --card-w: 170px; }
@@ -493,6 +575,16 @@
               <button id="zoomInBtn" aria-label="Zoom in">＋</button>
               <button id="printTreeBtn">Print Tree</button>
             </div>
+            <div class="tree-organize" aria-label="Tree organization controls">
+              <span class="control-label">Layout</span>
+              <div class="layout-switch" role="group" aria-label="Tree layout">
+                <button class="active" type="button" data-tree-layout="family">Family units</button>
+                <button type="button" data-tree-layout="generations">Generations</button>
+              </div>
+              <label class="tree-toggle"><input id="generationBandsToggle" type="checkbox" checked> Generation lanes</label>
+              <button id="collapseAllBtn" type="button">− Collapse branches</button>
+              <button id="expandAllBtn" type="button">＋ Expand all</button>
+            </div>
             <div class="legend" aria-label="Relationship legend">
               <span><i class="sample-line"></i> Biological</span>
               <span><i class="sample-line dashed"></i> Adopted</span>
@@ -504,6 +596,7 @@
           </div>
           <div id="treeCanvas" class="tree-canvas" tabindex="0" aria-label="Pan and zoom family tree">
             <div id="treeStage" class="tree-stage">
+              <div id="treeBands" class="tree-bands" aria-hidden="true"></div>
               <svg id="treeLinks" class="links" aria-hidden="true"></svg>
               <div id="treeNodes"></div>
             </div>
@@ -785,6 +878,8 @@
           showRelationLabels: "true",
           confirmDelete: "true",
           exportPrivateNotes: "true",
+          treeLayout: "family",
+          showGenerationBands: "true",
           firstRunComplete: false
         },
         members: [],
@@ -802,6 +897,7 @@
       let refreshFrame = 0;
       let fitAfterRefresh = false;
       let lastRefreshAt = 0;
+      let lastTreeLayout = null;
 
       function id(prefix) {
         return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
@@ -972,37 +1068,39 @@
       function renderTree() {
         const nodesEl = $("#treeNodes");
         const linksEl = $("#treeLinks");
+        const bandsEl = $("#treeBands");
+        const stageEl = $("#treeStage");
         const memberCount = data.members.length;
         const relationshipCount = data.relationships.length;
         const updatedLabel = lastRefreshAt ? ` · Updated ${new Date(lastRefreshAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : "";
         $("#treeSummary").textContent = `${memberCount} member${memberCount === 1 ? "" : "s"} · ${relationshipCount} connection${relationshipCount === 1 ? "" : "s"}${updatedLabel}`;
+        const layoutMode = data.settings.treeLayout === "generations" ? "generations" : "family";
+        $$("[data-tree-layout]").forEach(button => button.classList.toggle("active", button.dataset.treeLayout === layoutMode));
+        $("#generationBandsToggle").checked = data.settings.showGenerationBands !== "false";
+        $("#expandAllBtn").disabled = collapsed.size === 0;
+        $("#collapseAllBtn").disabled = !data.relationships.some(rel => rel.kind === "parentChild");
         nodesEl.innerHTML = "";
         linksEl.innerHTML = "";
+        bandsEl.innerHTML = "";
+        stageEl.classList.remove("trace-mode");
         if (!data.members.length) {
           nodesEl.innerHTML = `<div class="empty" style="position:absolute;left:80px;top:80px;width:360px">No family members yet. Add a member or load example data to begin.</div>`;
+          stageEl.style.width = "1200px";
+          stageEl.style.height = "900px";
+          lastTreeLayout = null;
           return;
         }
         const layout = computeLayout();
-        for (const rel of data.relationships) {
-          const a = layout.positions.get(rel.from);
-          const b = layout.positions.get(rel.to);
-          if (!a || !b) continue;
-          const isPartner = ["partner", "spouse", "formerPartner", "formerSpouse"].includes(rel.type) || rel.kind === "partner";
-          const x1 = a.x + 95, y1 = a.y + (isPartner ? 54 : 104);
-          const x2 = b.x + 95, y2 = b.y + (isPartner ? 54 : 4);
-          const midY = isPartner ? y1 : y1 + Math.max(35, (y2 - y1) / 2);
-          const path = isPartner
-            ? `M ${x1} ${y1} L ${x2} ${y2}`
-            : `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`;
-          const cls = `link ${rel.type || ""} ${rel.status === "former" || rel.kind === "formerPartner" ? "former" : ""} ${isPartner ? "partner" : ""}`;
-          linksEl.insertAdjacentHTML("beforeend", `<path class="${cls}" d="${path}"></path>`);
-          if (data.settings.showRelationLabels !== "false") {
-            linksEl.insertAdjacentHTML("beforeend", `<text class="rel-label" x="${(x1 + x2) / 2}" y="${isPartner ? y1 - 7 : midY - 5}" text-anchor="middle">${escapeHTML(relationLabel(rel))}</text>`);
-          }
-        }
+        lastTreeLayout = layout;
+        stageEl.style.width = `${layout.bounds.width}px`;
+        stageEl.style.height = `${layout.bounds.height}px`;
+        linksEl.setAttribute("viewBox", `0 0 ${layout.bounds.width} ${layout.bounds.height}`);
+        renderGenerationBands(layout);
+        renderFamilyConnectors(layout);
+        renderPeerConnectors(layout);
         for (const member of layout.members) {
           const pos = layout.positions.get(member.id);
-          const hasChildren = data.relationships.some(rel => rel.from === member.id && rel.kind === "parentChild");
+          const hasChildren = layout.relationships.some(rel => rel.from === member.id && rel.kind === "parentChild");
           nodesEl.insertAdjacentHTML("beforeend", `
             <article class="person-card ${member.status === "deceased" ? "deceased" : ""} ${member.archived ? "archived" : ""}" style="left:${pos.x}px;top:${pos.y}px" tabindex="0" data-member-id="${member.id}" aria-label="${escapeHTML(fullName(member))}">
               ${avatar(member)}
@@ -1026,14 +1124,223 @@
           card.addEventListener("keydown", event => {
             if (event.key === "Enter" || event.key === " ") openProfile(card.dataset.memberId);
           });
+          card.addEventListener("mouseenter", () => setTreeTrace(card.dataset.memberId));
+          card.addEventListener("mouseleave", clearTreeTrace);
+          card.addEventListener("focus", () => setTreeTrace(card.dataset.memberId));
+          card.addEventListener("blur", clearTreeTrace);
         });
         $$(".collapse-toggle").forEach(btn => btn.addEventListener("click", event => {
           event.stopPropagation();
           const memberId = btn.dataset.collapseId;
           collapsed.has(memberId) ? collapsed.delete(memberId) : collapsed.add(memberId);
           renderTree();
+          requestAnimationFrame(fitTree);
         }));
         applyTreeTransform();
+      }
+
+      function treeMetrics() {
+        const styles = getComputedStyle(document.documentElement);
+        const cardWidth = Number.parseFloat(styles.getPropertyValue("--card-w")) || 190;
+        const cardHeight = Number.parseFloat(styles.getPropertyValue("--card-h")) || 108;
+        const familyMode = data.settings.treeLayout !== "generations";
+        return {
+          cardWidth,
+          cardHeight,
+          peerGap: familyMode ? 80 : 68,
+          unitGap: familyMode ? 82 : 58,
+          familyGap: familyMode ? 90 : 64,
+          rowStep: cardHeight + (familyMode ? 170 : 145),
+          left: 150,
+          top: 110
+        };
+      }
+
+      function isPartnerRelationship(rel) {
+        return ["partner", "formerPartner"].includes(rel.kind)
+          || ["partner", "spouse", "formerPartner", "formerSpouse"].includes(rel.type);
+      }
+
+      function relationshipClass(value) {
+        return String(value || "").replace(/[^a-zA-Z0-9_-]/g, "");
+      }
+
+      function treeMemberData(memberIds) {
+        return escapeHTML(JSON.stringify([...new Set(memberIds)]));
+      }
+
+      function appendTreePath(d, classes, memberIds) {
+        $("#treeLinks").insertAdjacentHTML("beforeend", `<path class="link ${classes.filter(Boolean).map(relationshipClass).join(" ")}" data-member-ids="${treeMemberData(memberIds)}" d="${d}"></path>`);
+      }
+
+      function appendTreeLabel(x, y, text, memberIds) {
+        if (data.settings.showRelationLabels === "false" || !text) return;
+        $("#treeLinks").insertAdjacentHTML("beforeend", `<text class="rel-label" data-member-ids="${treeMemberData(memberIds)}" x="${x}" y="${y}" text-anchor="middle">${escapeHTML(text)}</text>`);
+      }
+
+      function renderGenerationBands(layout) {
+        const bandsEl = $("#treeBands");
+        if (data.settings.showGenerationBands === "false") return;
+        const levels = [...new Set(layout.members.map(member => layout.levels.get(member.id) || 0))].sort((a, b) => a - b);
+        levels.forEach((level, index) => {
+          const top = layout.metrics.top + level * layout.metrics.rowStep - 44;
+          bandsEl.insertAdjacentHTML("beforeend", `
+            <div class="generation-band" style="top:${top}px;width:${layout.bounds.width}px;height:${layout.metrics.rowStep - 18}px">
+              <span class="generation-label">Generation ${index + 1}</span>
+            </div>
+          `);
+        });
+      }
+
+      function renderFamilyConnectors(layout) {
+        const byChild = new Map();
+        layout.relationships.filter(rel => rel.kind === "parentChild").forEach(rel => {
+          if (!byChild.has(rel.to)) byChild.set(rel.to, []);
+          byChild.get(rel.to).push(rel);
+        });
+        const familyGroups = new Map();
+        byChild.forEach((rels, childId) => {
+          const parentIds = [...new Set(rels.map(rel => rel.from))].sort();
+          const key = parentIds.join("\u001f");
+          if (!familyGroups.has(key)) familyGroups.set(key, { parentIds, children: [] });
+          familyGroups.get(key).children.push({ childId, rels });
+        });
+
+        const { cardWidth, cardHeight } = layout.metrics;
+        familyGroups.forEach(group => {
+          const parents = group.parentIds.map(memberId => ({ memberId, ...layout.positions.get(memberId) })).filter(pos => Number.isFinite(pos.x));
+          const children = group.children.map(child => ({ ...child, ...layout.positions.get(child.childId) })).filter(pos => Number.isFinite(pos.x));
+          if (!parents.length || !children.length) return;
+          const memberIds = [...group.parentIds, ...children.map(child => child.childId)];
+          const parentCenters = parents.map(parent => parent.x + cardWidth / 2);
+          const childCenters = children.map(child => child.x + cardWidth / 2);
+          const childTop = Math.min(...children.map(child => child.y));
+          const parentBottom = Math.max(...parents.map(parent => parent.y + cardHeight));
+          let busY = parentBottom + Math.max(58, (childTop - parentBottom) * .52);
+          if (busY >= childTop - 30) busY = childTop - 36;
+          if (busY <= parentBottom + 20) busY = Math.max(parentBottom, childTop + cardHeight) + 48;
+
+          const minParentX = Math.min(...parents.map(parent => parent.x));
+          const maxParentX = Math.max(...parents.map(parent => parent.x));
+          const interveningUnitMember = layout.members.some(member => {
+            if (group.parentIds.includes(member.id)) return false;
+            const position = layout.positions.get(member.id);
+            return position
+              && Math.abs(position.y - parents[0].y) < 2
+              && position.x > minParentX
+              && position.x < maxParentX;
+          });
+          const samePartnerUnit = parents.length > 1
+            && parents.every(parent => layout.unitByMember.get(parent.memberId) === layout.unitByMember.get(parents[0].memberId))
+            && parents.every(parent => Math.abs(parent.y - parents[0].y) < 2)
+            && !interveningUnitMember;
+          const unionX = parentCenters.reduce((sum, value) => sum + value, 0) / parentCenters.length;
+          let trunkStartY;
+          if (samePartnerUnit) {
+            const sortedParents = [...parents].sort((a, b) => a.x - b.x);
+            for (let index = 0; index < sortedParents.length - 1; index++) {
+              const leftParent = sortedParents[index];
+              const rightParent = sortedParents[index + 1];
+              const hasRecordedPartnerLink = layout.relationships.some(rel => isPartnerRelationship(rel)
+                && ((rel.from === leftParent.memberId && rel.to === rightParent.memberId)
+                  || (rel.from === rightParent.memberId && rel.to === leftParent.memberId)));
+              if (!hasRecordedPartnerLink) {
+                appendTreePath(`M ${leftParent.x + cardWidth} ${leftParent.y + cardHeight / 2} H ${rightParent.x}`, ["family-trunk"], memberIds);
+              }
+            }
+            trunkStartY = parents[0].y + cardHeight / 2;
+          } else {
+            const mergeY = Math.min(busY - 28, parentBottom + 34);
+            parents.forEach((parent, index) => {
+              appendTreePath(`M ${parentCenters[index]} ${parent.y + cardHeight} V ${mergeY} H ${unionX}`, ["family-trunk"], memberIds);
+            });
+            trunkStartY = mergeY;
+          }
+          appendTreePath(`M ${unionX} ${trunkStartY} V ${busY}`, ["family-trunk"], memberIds);
+          const busPoints = [unionX, ...childCenters];
+          if (Math.max(...busPoints) - Math.min(...busPoints) > 1) {
+            appendTreePath(`M ${Math.min(...busPoints)} ${busY} H ${Math.max(...busPoints)}`, ["family-bus"], memberIds);
+          }
+          children.forEach((child, index) => {
+            const types = [...new Set(child.rels.map(rel => rel.type || "biological"))];
+            const classes = types.length === 1 ? [types[0]] : ["mixed"];
+            appendTreePath(`M ${childCenters[index]} ${busY} V ${child.y}`, classes, [...group.parentIds, child.childId]);
+            const labels = [...new Set(child.rels.map(relationLabel))];
+            appendTreeLabel(childCenters[index], child.y - 10, labels.join(" / "), [...group.parentIds, child.childId]);
+          });
+        });
+      }
+
+      function renderPeerConnectors(layout) {
+        const { cardWidth, cardHeight } = layout.metrics;
+        layout.relationships.filter(rel => rel.kind !== "parentChild").forEach(rel => {
+          const a = layout.positions.get(rel.from);
+          const b = layout.positions.get(rel.to);
+          if (!a || !b) return;
+          const memberIds = [rel.from, rel.to];
+          const partner = isPartnerRelationship(rel);
+          const sameRow = Math.abs(a.y - b.y) < 2;
+          let d;
+          let labelX;
+          let labelY;
+          if (sameRow) {
+            const left = a.x <= b.x ? a : b;
+            const right = left === a ? b : a;
+            const y = left.y + cardHeight / 2;
+            const x1 = left.x + cardWidth;
+            const x2 = right.x;
+            const hasInterveningCard = layout.members.some(member => {
+              if (member.id === rel.from || member.id === rel.to) return false;
+              const position = layout.positions.get(member.id);
+              return position
+                && Math.abs(position.y - left.y) < 2
+                && position.x > left.x
+                && position.x < right.x;
+            });
+            if (hasInterveningCard) {
+              const routeY = left.y - 30;
+              d = `M ${x1} ${y} V ${routeY} H ${x2} V ${y}`;
+              labelY = routeY - 8;
+            } else {
+              d = `M ${x1} ${y} H ${x2}`;
+              labelY = left.y - 10;
+            }
+            labelX = (x1 + x2) / 2;
+          } else {
+            const x1 = a.x + cardWidth / 2;
+            const y1 = a.y + cardHeight;
+            const x2 = b.x + cardWidth / 2;
+            const y2 = b.y;
+            const midY = y1 + (y2 - y1) / 2;
+            d = `M ${x1} ${y1} V ${midY} H ${x2} V ${y2}`;
+            labelX = (x1 + x2) / 2;
+            labelY = midY - 8;
+          }
+          appendTreePath(d, [rel.type, partner ? "partner" : rel.kind, rel.status === "former" || rel.kind === "formerPartner" ? "former" : ""], memberIds);
+          appendTreeLabel(labelX, labelY, relationLabel(rel), memberIds);
+        });
+      }
+
+      function setTreeTrace(memberId) {
+        const stageEl = $("#treeStage");
+        const relatedIds = new Set([memberId]);
+        data.relationships.forEach(rel => {
+          if (rel.from === memberId) relatedIds.add(rel.to);
+          if (rel.to === memberId) relatedIds.add(rel.from);
+        });
+        stageEl.classList.add("trace-mode");
+        $$(".person-card", stageEl).forEach(card => card.classList.toggle("trace-active", relatedIds.has(card.dataset.memberId)));
+        $$("[data-member-ids]", stageEl).forEach(element => {
+          let ids = [];
+          try { ids = JSON.parse(element.dataset.memberIds); } catch {}
+          element.classList.toggle("trace-active", ids.includes(memberId));
+        });
+      }
+
+      function clearTreeTrace() {
+        const stageEl = $("#treeStage");
+        stageEl.classList.remove("trace-mode");
+        $$(".trace-active", stageEl).forEach(element => element.classList.remove("trace-active"));
       }
 
       function computeLayout() {
@@ -1047,64 +1354,251 @@
           parentsByChild.get(rel.to).push(rel.from);
         }
         const hidden = new Set();
-        function hideDescendants(memberId) {
+        function hideDescendants(memberId, visited = new Set()) {
+          if (visited.has(memberId)) return;
+          visited.add(memberId);
           for (const childId of childrenByParent.get(memberId) || []) {
             hidden.add(childId);
-            hideDescendants(childId);
+            hideDescendants(childId, visited);
           }
         }
-        collapsed.forEach(hideDescendants);
+        collapsed.forEach(memberId => hideDescendants(memberId));
         const members = visibleMembers.filter(member => !hidden.has(member.id));
-        const level = new Map();
-        const roots = members.filter(member => !(parentsByChild.get(member.id) || []).some(pid => memberById(pid) && !hidden.has(pid)));
-        if (!roots.length && members[0]) roots.push(members[0]);
-        roots.forEach(root => level.set(root.id, 0));
-        let changed = true;
-        while (changed) {
-          changed = false;
-          for (const rel of data.relationships.filter(r => r.kind === "parentChild")) {
-            if (hidden.has(rel.from) || hidden.has(rel.to)) continue;
-            if (level.has(rel.from)) {
-              const next = level.get(rel.from) + 1;
-              if (!level.has(rel.to) || level.get(rel.to) < next) {
-                level.set(rel.to, next);
-                changed = true;
-              }
-            }
-          }
+        const visibleIds = new Set(members.map(member => member.id));
+        const relationships = data.relationships.filter(rel => visibleIds.has(rel.from) && visibleIds.has(rel.to));
+        const metrics = treeMetrics();
+        const unionParent = new Map(members.map(member => [member.id, member.id]));
+        function find(memberId) {
+          const parentId = unionParent.get(memberId);
+          if (parentId === memberId) return memberId;
+          const root = find(parentId);
+          unionParent.set(memberId, root);
+          return root;
         }
-        members.forEach(member => { if (!level.has(member.id)) level.set(member.id, 0); });
-        for (const rel of data.relationships.filter(r => ["partner", "formerPartner"].includes(r.kind))) {
-          if (level.has(rel.from) && !level.has(rel.to)) level.set(rel.to, level.get(rel.from));
-          if (level.has(rel.to) && !level.has(rel.from)) level.set(rel.from, level.get(rel.to));
+        function union(a, b) {
+          const rootA = find(a);
+          const rootB = find(b);
+          if (rootA !== rootB) unionParent.set(rootB, rootA);
         }
-        const groups = new Map();
+        relationships.filter(isPartnerRelationship).forEach(rel => union(rel.from, rel.to));
+        const coParentsByChild = new Map();
+        relationships.filter(rel => rel.kind === "parentChild").forEach(rel => {
+          if (!coParentsByChild.has(rel.to)) coParentsByChild.set(rel.to, []);
+          coParentsByChild.get(rel.to).push(rel.from);
+        });
+        coParentsByChild.forEach(parentIds => {
+          const uniqueParentIds = [...new Set(parentIds)];
+          for (let index = 1; index < uniqueParentIds.length; index++) union(uniqueParentIds[0], uniqueParentIds[index]);
+        });
+        const unitMap = new Map();
         members.forEach(member => {
-          const lvl = level.get(member.id) || 0;
-          if (!groups.has(lvl)) groups.set(lvl, []);
-          groups.get(lvl).push(member);
+          const unitId = find(member.id);
+          if (!unitMap.has(unitId)) unitMap.set(unitId, { id: unitId, members: [] });
+          unitMap.get(unitId).members.push(member);
         });
-        const positions = new Map();
-        [...groups.keys()].sort((a, b) => a - b).forEach(lvl => {
-          groups.get(lvl).sort((a, b) => fullName(a).localeCompare(fullName(b))).forEach((member, index) => {
-            positions.set(member.id, { x: 120 + index * 250, y: 100 + lvl * 210 });
+        const units = [...unitMap.values()];
+        units.forEach(unit => unit.members.sort((a, b) => fullName(a).localeCompare(fullName(b))));
+        const unitByMember = new Map();
+        units.forEach(unit => unit.members.forEach(member => unitByMember.set(member.id, unit.id)));
+        const unitParents = new Map(units.map(unit => [unit.id, new Set()]));
+        const unitChildren = new Map(units.map(unit => [unit.id, new Set()]));
+        relationships.filter(rel => rel.kind === "parentChild").forEach(rel => {
+          const fromUnit = unitByMember.get(rel.from);
+          const toUnit = unitByMember.get(rel.to);
+          if (!fromUnit || !toUnit || fromUnit === toUnit) return;
+          unitChildren.get(fromUnit).add(toUnit);
+          unitParents.get(toUnit).add(fromUnit);
+        });
+        const unitLevels = new Map(units.map(unit => [unit.id, 0]));
+        const indegree = new Map(units.map(unit => [unit.id, unitParents.get(unit.id).size]));
+        const queue = units.filter(unit => indegree.get(unit.id) === 0).sort((a, b) => unitName(a).localeCompare(unitName(b)));
+        for (let index = 0; index < queue.length; index++) {
+          const unit = queue[index];
+          unitChildren.get(unit.id).forEach(childId => {
+            unitLevels.set(childId, Math.max(unitLevels.get(childId), unitLevels.get(unit.id) + 1));
+            indegree.set(childId, indegree.get(childId) - 1);
+            if (indegree.get(childId) === 0) queue.push(unitMap.get(childId));
           });
+        }
+        relationships.filter(rel => rel.kind === "sibling").forEach(rel => {
+          const unitA = unitByMember.get(rel.from);
+          const unitB = unitByMember.get(rel.to);
+          if (unitA && unitB && !unitPathExists(unitA, unitB, unitChildren) && !unitPathExists(unitB, unitA, unitChildren)) {
+            const sharedLevel = Math.max(unitLevels.get(unitA), unitLevels.get(unitB));
+            unitLevels.set(unitA, sharedLevel);
+            unitLevels.set(unitB, sharedLevel);
+          }
         });
-        return { members, positions };
+        for (let pass = 0; pass < units.length; pass++) {
+          let changed = false;
+          unitChildren.forEach((childIds, parentId) => childIds.forEach(childId => {
+            const nextLevel = unitLevels.get(parentId) + 1;
+            if (unitLevels.get(childId) < nextLevel) {
+              unitLevels.set(childId, nextLevel);
+              changed = true;
+            }
+          }));
+          if (!changed) break;
+        }
+        const levels = new Map();
+        units.forEach(unit => unit.members.forEach(member => levels.set(member.id, unitLevels.get(unit.id) || 0)));
+        const positions = new Map();
+        if (data.settings.treeLayout === "generations") {
+          placeGenerationLayout(units, unitLevels, unitParents, positions, metrics);
+        } else {
+          placeFamilyLayout(units, unitMap, unitParents, unitChildren, unitLevels, positions, metrics);
+        }
+        const xs = [...positions.values()].map(position => position.x);
+        const ys = [...positions.values()].map(position => position.y);
+        const minX = Math.min(24, ...xs);
+        const minY = Math.min(50, ...ys);
+        const maxX = Math.max(...xs) + metrics.cardWidth;
+        const maxY = Math.max(...ys) + metrics.cardHeight;
+        return {
+          members,
+          relationships,
+          positions,
+          levels,
+          unitByMember,
+          metrics,
+          bounds: {
+            minX,
+            minY,
+            maxX,
+            maxY,
+            width: Math.max(1200, maxX + 180),
+            height: Math.max(900, maxY + 180)
+          }
+        };
+      }
+
+      function unitName(unit) {
+        return unit.members.map(fullName).join(" / ");
+      }
+
+      function unitBirthValue(unit) {
+        return unit.members.map(member => member.birthDate || "9999-12-31").sort()[0];
+      }
+
+      function unitPathExists(fromId, targetId, unitChildren, visited = new Set()) {
+        if (fromId === targetId) return true;
+        if (visited.has(fromId)) return false;
+        visited.add(fromId);
+        return [...(unitChildren.get(fromId) || [])].some(childId => unitPathExists(childId, targetId, unitChildren, visited));
+      }
+
+      function unitWidth(unit, metrics) {
+        return unit.members.length * metrics.cardWidth + Math.max(0, unit.members.length - 1) * metrics.peerGap;
+      }
+
+      function placeGenerationLayout(units, unitLevels, unitParents, positions, metrics) {
+        const rows = new Map();
+        units.forEach(unit => {
+          const level = unitLevels.get(unit.id) || 0;
+          if (!rows.has(level)) rows.set(level, []);
+          rows.get(level).push(unit);
+        });
+        const order = new Map();
+        const rowWidths = new Map();
+        [...rows.keys()].sort((a, b) => a - b).forEach(level => {
+          const row = rows.get(level);
+          row.sort((a, b) => {
+            const aParents = [...unitParents.get(a.id)].map(parentId => order.get(parentId)).filter(Number.isFinite);
+            const bParents = [...unitParents.get(b.id)].map(parentId => order.get(parentId)).filter(Number.isFinite);
+            const aAnchor = aParents.length ? aParents.reduce((sum, value) => sum + value, 0) / aParents.length : Number.POSITIVE_INFINITY;
+            const bAnchor = bParents.length ? bParents.reduce((sum, value) => sum + value, 0) / bParents.length : Number.POSITIVE_INFINITY;
+            return aAnchor - bAnchor || unitBirthValue(a).localeCompare(unitBirthValue(b)) || unitName(a).localeCompare(unitName(b));
+          });
+          let cursor = metrics.left;
+          row.forEach((unit, index) => {
+            const width = unitWidth(unit, metrics);
+            unit.members.forEach((member, memberIndex) => positions.set(member.id, {
+              x: cursor + memberIndex * (metrics.cardWidth + metrics.peerGap),
+              y: metrics.top + level * metrics.rowStep
+            }));
+            order.set(unit.id, index);
+            cursor += width + metrics.unitGap;
+          });
+          rowWidths.set(level, Math.max(0, cursor - metrics.unitGap - metrics.left));
+        });
+        const widestRow = Math.max(0, ...rowWidths.values());
+        rows.forEach((row, level) => {
+          const shift = (widestRow - rowWidths.get(level)) / 2;
+          row.forEach(unit => unit.members.forEach(member => {
+            positions.get(member.id).x += shift;
+          }));
+        });
+      }
+
+      function placeFamilyLayout(units, unitMap, unitParents, unitChildren, unitLevels, positions, metrics) {
+        const primaryParent = new Map();
+        units.forEach(unit => {
+          const parents = [...unitParents.get(unit.id)].sort((a, b) => unitName(unitMap.get(a)).localeCompare(unitName(unitMap.get(b))));
+          if (parents.length) primaryParent.set(unit.id, parents[0]);
+        });
+        const primaryChildren = new Map(units.map(unit => [unit.id, []]));
+        primaryParent.forEach((parentId, childId) => primaryChildren.get(parentId).push(childId));
+        primaryChildren.forEach(childIds => childIds.sort((a, b) => {
+          const unitA = unitMap.get(a);
+          const unitB = unitMap.get(b);
+          return unitBirthValue(unitA).localeCompare(unitBirthValue(unitB)) || unitName(unitA).localeCompare(unitName(unitB));
+        }));
+        const measured = new Map();
+        function measure(unitId, trail = new Set()) {
+          if (measured.has(unitId)) return measured.get(unitId);
+          if (trail.has(unitId)) return unitWidth(unitMap.get(unitId), metrics);
+          const nextTrail = new Set(trail).add(unitId);
+          const childWidths = primaryChildren.get(unitId).map(childId => measure(childId, nextTrail));
+          const childrenWidth = childWidths.reduce((sum, width) => sum + width, 0) + Math.max(0, childWidths.length - 1) * metrics.familyGap;
+          const width = Math.max(unitWidth(unitMap.get(unitId), metrics), childrenWidth);
+          measured.set(unitId, width);
+          return width;
+        }
+        const placed = new Set();
+        function place(unitId, left) {
+          if (placed.has(unitId)) return;
+          placed.add(unitId);
+          const unit = unitMap.get(unitId);
+          const span = measure(unitId);
+          const ownWidth = unitWidth(unit, metrics);
+          const center = left + span / 2;
+          const unitLeft = center - ownWidth / 2;
+          unit.members.forEach((member, index) => positions.set(member.id, {
+            x: unitLeft + index * (metrics.cardWidth + metrics.peerGap),
+            y: metrics.top + (unitLevels.get(unitId) || 0) * metrics.rowStep
+          }));
+          const childIds = primaryChildren.get(unitId);
+          const childWidths = childIds.map(measure);
+          const totalChildrenWidth = childWidths.reduce((sum, width) => sum + width, 0) + Math.max(0, childWidths.length - 1) * metrics.familyGap;
+          let childLeft = center - totalChildrenWidth / 2;
+          childIds.forEach((childId, index) => {
+            place(childId, childLeft);
+            childLeft += childWidths[index] + metrics.familyGap;
+          });
+        }
+        const roots = units.filter(unit => !primaryParent.has(unit.id)).sort((a, b) => unitBirthValue(a).localeCompare(unitBirthValue(b)) || unitName(a).localeCompare(unitName(b)));
+        let cursor = metrics.left;
+        roots.forEach(root => {
+          place(root.id, cursor);
+          cursor += measure(root.id) + metrics.unitGap;
+        });
+        units.filter(unit => !placed.has(unit.id)).forEach(unit => {
+          place(unit.id, cursor);
+          cursor += measure(unit.id) + metrics.unitGap;
+        });
       }
 
       function fitTree() {
-        const layout = computeLayout();
+        const layout = lastTreeLayout || computeLayout();
         if (!layout.positions.size) return;
-        const xs = [...layout.positions.values()].map(p => p.x);
-        const ys = [...layout.positions.values()].map(p => p.y);
-        const minX = Math.min(...xs), minY = Math.min(...ys);
-        const maxX = Math.max(...xs) + 220, maxY = Math.max(...ys) + 140;
+        const { minX, minY, maxX, maxY } = layout.bounds;
         const canvas = $("#treeCanvas").getBoundingClientRect();
-        const scale = Math.min(1.25, Math.max(.35, Math.min(canvas.width / (maxX - minX + 120), canvas.height / (maxY - minY + 120))));
+        const contentWidth = maxX - minX + 120;
+        const contentHeight = maxY - minY + 120;
+        const scale = Math.min(1.2, Math.max(.28, Math.min(canvas.width / contentWidth, canvas.height / contentHeight)));
         treeState.scale = scale;
-        treeState.x = 60 - minX * scale;
-        treeState.y = 60 - minY * scale;
+        treeState.x = (canvas.width - (maxX - minX) * scale) / 2 - minX * scale;
+        treeState.y = (canvas.height - (maxY - minY) * scale) / 2 - minY * scale;
         applyTreeTransform();
       }
 
@@ -1679,6 +2173,28 @@
         $("#addMemberBtn2").addEventListener("click", () => openMember());
         $("#settingsBtn").addEventListener("click", () => setView("settings"));
         $("#fitBtn").addEventListener("click", fitTree);
+        $$("[data-tree-layout]").forEach(button => button.addEventListener("click", () => {
+          if (data.settings.treeLayout === button.dataset.treeLayout) return;
+          data.settings.treeLayout = button.dataset.treeLayout;
+          lastTreeLayout = null;
+          save();
+        }));
+        $("#generationBandsToggle").addEventListener("change", event => {
+          data.settings.showGenerationBands = event.target.checked ? "true" : "false";
+          save();
+        });
+        $("#collapseAllBtn").addEventListener("click", () => {
+          collapsed = new Set(data.relationships.filter(rel => rel.kind === "parentChild").map(rel => rel.from));
+          lastTreeLayout = null;
+          renderTree();
+          requestAnimationFrame(fitTree);
+        });
+        $("#expandAllBtn").addEventListener("click", () => {
+          collapsed.clear();
+          lastTreeLayout = null;
+          renderTree();
+          requestAnimationFrame(fitTree);
+        });
         $("#zoomInBtn").addEventListener("click", () => { treeState.scale = Math.min(2.4, treeState.scale + .12); applyTreeTransform(); });
         $("#zoomOutBtn").addEventListener("click", () => { treeState.scale = Math.max(.25, treeState.scale - .12); applyTreeTransform(); });
         $("#printTreeBtn").addEventListener("click", () => window.print());
@@ -1809,6 +2325,15 @@
           treeState.y = cy - (cy - treeState.y) * (treeState.scale / oldScale);
           applyTreeTransform();
         }, { passive: false });
+        window.addEventListener("resize", () => {
+          clearTimeout(fitTree.resizeTimer);
+          fitTree.resizeTimer = setTimeout(() => {
+            if (activeView !== "tree") return;
+            lastTreeLayout = null;
+            renderTree();
+            requestAnimationFrame(fitTree);
+          }, 120);
+        });
       }
 
       initOptions();

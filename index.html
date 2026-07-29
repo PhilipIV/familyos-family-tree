@@ -778,14 +778,16 @@
     <form id="relationForm" method="dialog">
       <div class="modal-head"><h2 id="relationTitle">Relationship</h2><button type="button" class="icon" data-close="relationDialog" aria-label="Close">×</button></div>
       <div class="modal-body form-grid">
+        <input type="hidden" name="relationshipId">
         <input type="hidden" name="baseId">
-        <label>Action<select name="mode"><option value="new">Create new member</option><option value="existing">Link existing member</option></select></label>
-        <label>Relationship<select name="kind"><option value="parent">Parent</option><option value="child">Child</option><option value="sibling">Sibling</option><option value="partner">Current partner</option><option value="formerPartner">Former partner</option><option value="guardian">Guardian</option></select></label>
+        <div id="relationEditSummary" class="wide muted" hidden></div>
+        <label class="relation-create-field">Action<select name="mode"><option value="new">Create new member</option><option value="existing">Link existing member</option></select></label>
+        <label class="relation-create-field">Relationship<select name="kind"><option value="parent">Parent</option><option value="child">Child</option><option value="sibling">Sibling</option><option value="partner">Current partner</option><option value="formerPartner">Former partner</option><option value="guardian">Guardian</option></select></label>
         <label>Relationship type<select name="type"><option value="biological">Biological</option><option value="adopted">Adopted</option><option value="step">Step</option><option value="foster">Foster</option><option value="guardian">Guardian</option><option value="spouse">Spouse</option><option value="partner">Partner</option><option value="formerSpouse">Former spouse</option><option value="formerPartner">Former partner</option></select></label>
-        <label class="existing-field wide" style="display:none">Existing member<select name="existingId"></select></label>
-        <label class="new-field">First name<input name="firstName"></label>
-        <label class="new-field">Last name<input name="lastName"></label>
-        <label class="new-field">Date of birth<input name="birthDate" type="date"></label>
+        <label class="existing-field relation-create-field wide" style="display:none">Existing member<select name="existingId"></select></label>
+        <label class="new-field relation-create-field">First name<input name="firstName"></label>
+        <label class="new-field relation-create-field">Last name<input name="lastName"></label>
+        <label class="new-field relation-create-field">Date of birth<input name="birthDate" type="date"></label>
         <label>Start date<input name="startDate" type="date"></label>
         <label>End date<input name="endDate" type="date"></label>
         <label>Marriage date<input name="marriageDate" type="date"></label>
@@ -1173,9 +1175,35 @@
         $("#treeLinks").insertAdjacentHTML("beforeend", `<path class="link ${classes.filter(Boolean).map(relationshipClass).join(" ")}" data-member-ids="${treeMemberData(memberIds)}" d="${d}"></path>`);
       }
 
-      function appendTreeLabel(x, y, text, memberIds) {
+      function treeLabelOverlapsCard(x, y, text, layout) {
+        const halfWidth = Math.max(24, text.length * 3.5 + 8);
+        const labelBox = { left: x - halfWidth, right: x + halfWidth, top: y - 15, bottom: y + 5 };
+        return layout.members.some(member => {
+          const position = layout.positions.get(member.id);
+          if (!position) return false;
+          const cardBox = {
+            left: position.x - 8,
+            right: position.x + layout.metrics.cardWidth + 8,
+            top: position.y - 8,
+            bottom: position.y + layout.metrics.cardHeight + 8
+          };
+          return labelBox.left < cardBox.right
+            && labelBox.right > cardBox.left
+            && labelBox.top < cardBox.bottom
+            && labelBox.bottom > cardBox.top;
+        });
+      }
+
+      function findTreeLabelPosition(x, y, text, layout, alternatives = []) {
+        const candidates = [{ x, y }, ...alternatives];
+        return candidates.find(candidate => !treeLabelOverlapsCard(candidate.x, candidate.y, text, layout)) || null;
+      }
+
+      function appendTreeLabel(x, y, text, memberIds, layout, alternatives = []) {
         if (data.settings.showRelationLabels === "false" || !text) return;
-        $("#treeLinks").insertAdjacentHTML("beforeend", `<text class="rel-label" data-member-ids="${treeMemberData(memberIds)}" x="${x}" y="${y}" text-anchor="middle">${escapeHTML(text)}</text>`);
+        const point = findTreeLabelPosition(x, y, text, layout, alternatives);
+        if (!point) return;
+        $("#treeLinks").insertAdjacentHTML("beforeend", `<text class="rel-label" data-member-ids="${treeMemberData(memberIds)}" x="${point.x}" y="${point.y}" text-anchor="middle">${escapeHTML(text)}</text>`);
       }
 
       function renderGenerationBands(layout) {
@@ -1264,9 +1292,22 @@
           children.forEach((child, index) => {
             const types = [...new Set(child.rels.map(rel => rel.type || "biological"))];
             const classes = types.length === 1 ? [types[0]] : ["mixed"];
-            appendTreePath(`M ${childCenters[index]} ${busY} V ${child.y}`, classes, [...group.parentIds, child.childId]);
+            const childBottom = child.y + cardHeight;
+            const childEdgeY = busY > childBottom ? childBottom : child.y;
+            appendTreePath(`M ${childCenters[index]} ${busY} V ${childEdgeY}`, classes, [...group.parentIds, child.childId]);
             const labels = [...new Set(child.rels.map(relationLabel))];
-            appendTreeLabel(childCenters[index], child.y - 10, labels.join(" / "), [...group.parentIds, child.childId]);
+            const labelY = busY + (childEdgeY - busY) * .55;
+            const labelAlternatives = busY > childBottom
+              ? [{ x: childCenters[index], y: childBottom + 28 }, { x: childCenters[index], y: child.y - 24 }]
+              : [{ x: childCenters[index], y: child.y - 24 }, { x: childCenters[index], y: childBottom + 28 }];
+            appendTreeLabel(
+              childCenters[index],
+              labelY,
+              labels.join(" / "),
+              [...group.parentIds, child.childId],
+              layout,
+              labelAlternatives
+            );
           });
         });
       }
@@ -1303,7 +1344,7 @@
               labelY = routeY - 8;
             } else {
               d = `M ${x1} ${y} H ${x2}`;
-              labelY = left.y - 10;
+              labelY = y - 8;
             }
             labelX = (x1 + x2) / 2;
           } else {
@@ -1317,7 +1358,10 @@
             labelY = midY - 8;
           }
           appendTreePath(d, [rel.type, partner ? "partner" : rel.kind, rel.status === "former" || rel.kind === "formerPartner" ? "former" : ""], memberIds);
-          appendTreeLabel(labelX, labelY, relationLabel(rel), memberIds);
+          appendTreeLabel(labelX, labelY, relationLabel(rel), memberIds, layout, [
+            { x: labelX, y: Math.min(a.y, b.y) - 24 },
+            { x: labelX, y: Math.max(a.y, b.y) + cardHeight + 28 }
+          ]);
         });
       }
 
@@ -1809,7 +1853,7 @@
         const rels = relationsFor(memberId);
         const relationshipRows = rels.map(rel => {
           const other = memberById(rel.from === memberId ? rel.to : rel.from);
-          return other ? `<li>${escapeHTML(displayName(other))}: ${escapeHTML(relationLabel(rel))} <button data-unlink="${rel.id}">Unlink</button></li>` : "";
+          return other ? `<li>${escapeHTML(displayName(other))}: ${escapeHTML(relationLabel(rel))} <button data-edit-relation="${rel.id}">Edit</button> <button data-unlink="${rel.id}">Unlink</button></li>` : "";
         }).join("");
         $("#profileTitle").textContent = displayName(member);
         $("#profileBody").innerHTML = `
@@ -1826,6 +1870,7 @@
           </div>
         `;
         $$("[data-relation]", $("#profileBody")).forEach(btn => btn.addEventListener("click", () => openRelation(memberId, btn.dataset.relation)));
+        $$("[data-edit-relation]", $("#profileBody")).forEach(btn => btn.addEventListener("click", () => openRelationshipEditor(btn.dataset.editRelation, memberId)));
         $$("[data-unlink]", $("#profileBody")).forEach(btn => btn.addEventListener("click", () => unlinkRelationship(btn.dataset.unlink)));
         $("#profileDialog").showModal();
       }
@@ -1833,6 +1878,8 @@
       function openRelation(baseId, kind) {
         const form = $("#relationForm");
         form.reset();
+        $("#relationTitle").textContent = "Relationship";
+        $("#relationEditSummary").hidden = true;
         form.elements.baseId.value = baseId;
         form.elements.kind.value = kind;
         if (kind === "partner") form.elements.type.value = "partner";
@@ -1844,14 +1891,54 @@
       }
 
       function syncRelationMode() {
-        const mode = $("#relationForm").elements.mode.value;
+        const form = $("#relationForm");
+        const editing = Boolean(form.elements.relationshipId.value);
+        $$(".relation-create-field", form).forEach(el => el.style.display = editing ? "none" : "");
+        if (editing) return;
+        const mode = form.elements.mode.value;
         $$(".existing-field").forEach(el => el.style.display = mode === "existing" ? "" : "none");
         $$(".new-field").forEach(el => el.style.display = mode === "new" ? "" : "none");
+      }
+
+      function openRelationshipEditor(relId, baseId) {
+        const rel = data.relationships.find(item => item.id === relId);
+        const base = memberById(baseId);
+        const other = rel && memberById(rel.from === baseId ? rel.to : rel.from);
+        if (!rel || !base || !other) return;
+        const form = $("#relationForm");
+        form.reset();
+        form.elements.relationshipId.value = rel.id;
+        form.elements.baseId.value = baseId;
+        form.elements.type.value = rel.type || "biological";
+        form.elements.startDate.value = rel.startDate || "";
+        form.elements.endDate.value = rel.endDate || "";
+        form.elements.marriageDate.value = rel.marriageDate || "";
+        form.elements.divorceDate.value = rel.divorceDate || "";
+        $("#relationTitle").textContent = "Edit Relationship";
+        $("#relationEditSummary").textContent = `${displayName(base)} and ${displayName(other)}`;
+        $("#relationEditSummary").hidden = false;
+        syncRelationMode();
+        $("#relationDialog").showModal();
       }
 
       function saveRelationshipFromForm() {
         const form = $("#relationForm");
         const values = Object.fromEntries(new FormData(form).entries());
+        if (values.relationshipId) {
+          const rel = data.relationships.find(item => item.id === values.relationshipId);
+          if (!rel) return;
+          rel.type = values.type;
+          rel.status = rel.kind === "formerPartner" || values.type?.startsWith("former") ? "former" : "current";
+          rel.startDate = values.startDate || "";
+          rel.endDate = values.endDate || "";
+          rel.marriageDate = values.marriageDate || "";
+          rel.divorceDate = values.divorceDate || "";
+          save();
+          $("#relationDialog").close();
+          $("#profileDialog").close();
+          openProfile(values.baseId);
+          return;
+        }
         let otherId = values.existingId;
         if (values.mode === "new") {
           if (!values.firstName.trim()) {
